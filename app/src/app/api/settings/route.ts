@@ -11,6 +11,7 @@ import {
 } from '@/lib/api/homeassistant';
 import { createActivityLog } from '@/lib/activity-log';
 import { isWebhookAuthEnabled } from '@/lib/webhook-secret';
+import { AUTO_CREATE_SPOOLS_KEY, isAutoCreateEnabled } from '@/lib/auto-create-spool';
 import {
   UNASSIGNED_LOCATION_KEY,
   SPOOLMAN_LOCATION_MAX,
@@ -57,6 +58,7 @@ export async function GET() {
       const qrBaseUrlSetting = await prisma.settings.findUnique({ where: { key: 'qr_base_url' } });
       const showLocationSetting = await prisma.settings.findUnique({ where: { key: 'show_spool_location' } });
       const neverAutoClearSetting = await prisma.settings.findUnique({ where: { key: 'never_auto_clear_tray' } });
+    const autoCreateSpoolsSetting = await prisma.settings.findUnique({ where: { key: AUTO_CREATE_SPOOLS_KEY } });
       const ignoreColorSetting = await prisma.settings.findUnique({ where: { key: 'ignore_color_mismatch' } });
       const syncLocationSetting = await prisma.settings.findUnique({ where: { key: 'sync_spoolman_location' } });
       const unassignedLocationSetting = await prisma.settings.findUnique({ where: { key: UNASSIGNED_LOCATION_KEY } });
@@ -78,6 +80,7 @@ export async function GET() {
         qrBaseUrl: qrBaseUrlSetting?.value || '',
         showSpoolLocation: showLocationSetting?.value === 'true',
         neverAutoClearTray: neverAutoClearSetting?.value === 'true',
+        autoCreateSpools: isAutoCreateEnabled(autoCreateSpoolsSetting?.value),
         ignoreColorMismatch: ignoreColorSetting?.value === 'true',
         syncSpoolmanLocation: syncLocationSetting?.value === 'true',
         unassignedSpoolLocation: unassignedLocationSetting?.value ?? '',
@@ -267,6 +270,7 @@ export async function GET() {
     const qrBaseUrlSetting = await prisma.settings.findUnique({ where: { key: 'qr_base_url' } });
     const showLocationSetting = await prisma.settings.findUnique({ where: { key: 'show_spool_location' } });
     const neverAutoClearSetting = await prisma.settings.findUnique({ where: { key: 'never_auto_clear_tray' } });
+    const autoCreateSpoolsSetting = await prisma.settings.findUnique({ where: { key: AUTO_CREATE_SPOOLS_KEY } });
     const ignoreColorSetting = await prisma.settings.findUnique({ where: { key: 'ignore_color_mismatch' } });
     const syncLocationSetting = await prisma.settings.findUnique({ where: { key: 'sync_spoolman_location' } });
     const unassignedLocationSetting = await prisma.settings.findUnique({ where: { key: UNASSIGNED_LOCATION_KEY } });
@@ -284,6 +288,7 @@ export async function GET() {
       qrBaseUrl: qrBaseUrlSetting?.value || '',
       showSpoolLocation: showLocationSetting?.value === 'true',
       neverAutoClearTray: neverAutoClearSetting?.value === 'true',
+        autoCreateSpools: isAutoCreateEnabled(autoCreateSpoolsSetting?.value),
       ignoreColorMismatch: ignoreColorSetting?.value === 'true',
       syncSpoolmanLocation: syncLocationSetting?.value === 'true',
       unassignedSpoolLocation: unassignedLocationSetting?.value ?? '',
@@ -429,6 +434,18 @@ export async function POST(request: NextRequest) {
       // recognize and migrate them instead of stranding them.
       await rememberGranularity(granularity);
       return NextResponse.json({ success: true, granularity });
+    }
+
+    if (type === AUTO_CREATE_SPOOLS_KEY) {
+      // Fork feature: register unknown Bambu RFID spools in Spoolman when they
+      // are loaded into the AMS. Defaults on; stored explicitly when toggled.
+      const enabled = body.enabled === true;
+      await prisma.settings.upsert({
+        where: { key: AUTO_CREATE_SPOOLS_KEY },
+        create: { key: AUTO_CREATE_SPOOLS_KEY, value: String(enabled) },
+        update: { value: String(enabled) },
+      });
+      return NextResponse.json({ success: true });
     }
 
     if (type === 'never_auto_clear_tray') {

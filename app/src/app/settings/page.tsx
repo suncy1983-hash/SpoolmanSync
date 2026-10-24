@@ -38,6 +38,7 @@ interface Settings {
   } | null;
   spoolman: { url: string; connected: boolean } | null;
   neverAutoClearTray?: boolean;
+  autoCreateSpools?: boolean;
   ignoreColorMismatch?: boolean;
   webhookConfigured?: boolean;
 }
@@ -99,6 +100,8 @@ function SettingsContent() {
 
   // Sync behavior settings
   const [neverAutoClearTray, setNeverAutoClearTray] = useState(false);
+  const [autoCreateSpools, setAutoCreateSpools] = useState(true);
+  const [amsSyncing, setAmsSyncing] = useState(false);
   const [ignoreColorMismatch, setIgnoreColorMismatch] = useState(false);
   const [syncSpoolmanLocation, setSyncSpoolmanLocation] = useState(false);
   const [locationGranularity, setLocationGranularity] = useState<'tray' | 'ams'>('tray');
@@ -221,6 +224,9 @@ function SettingsContent() {
       }
       if (data.ignoreColorMismatch !== undefined) {
         setIgnoreColorMismatch(data.ignoreColorMismatch);
+      }
+      if (data.autoCreateSpools !== undefined) {
+        setAutoCreateSpools(data.autoCreateSpools);
       }
       if (data.neverAutoClearTray !== undefined) {
         setNeverAutoClearTray(data.neverAutoClearTray);
@@ -1319,6 +1325,62 @@ function SettingsContent() {
                       <p className="text-xs text-muted-foreground">
                         Display the Spoolman location field on each spool card (e.g., shelf, dry box, bin number)
                       </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="auto-create-spools"
+                      className="mt-1"
+                      checked={autoCreateSpools}
+                      onCheckedChange={async (checked) => {
+                        const enabled = checked === true;
+                        setAutoCreateSpools(enabled);
+                        try {
+                          const res = await fetch('/api/settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ type: 'auto_create_spools', enabled }),
+                          });
+                          if (!res.ok) throw new Error();
+                          toast.success(enabled ? 'New Bambu RFID spools will be added to Spoolman automatically' : 'Auto-create of spools turned off');
+                        } catch {
+                          setAutoCreateSpools(!enabled);
+                          toast.error('Failed to save setting');
+                        }
+                      }}
+                    />
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor="auto-create-spools" className="text-sm font-medium cursor-pointer">
+                          Auto-create Bambu spools from AMS RFID
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          When a Bambu spool with an RFID tag is loaded and Spoolman has no spool with its serial, SpoolmanSync creates the vendor, filament and spool (remaining weight from the AMS estimate) and assigns it to the tray. Trays you assigned by hand are never touched.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={amsSyncing}
+                        onClick={async () => {
+                          setAmsSyncing(true);
+                          try {
+                            const res = await fetch('/api/spools/sync-ams', { method: 'POST' });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'AMS sync failed');
+                            const errors = data.errors?.length ? `, ${data.errors.length} errors` : '';
+                            toast.success(`AMS sync: ${data.created} created, ${data.assigned} assigned, ${data.alreadyAssigned} already assigned${errors}`);
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : 'AMS sync failed');
+                          } finally {
+                            setAmsSyncing(false);
+                          }
+                        }}
+                      >
+                        {amsSyncing ? 'Syncing…' : 'Sync AMS spools now'}
+                      </Button>
                     </div>
                   </div>
 

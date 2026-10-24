@@ -38,6 +38,32 @@ export interface Spool {
   lot_nr?: string;
 }
 
+export interface CreateFilamentPayload {
+  name: string;
+  vendor_id?: number;
+  material?: string;
+  density: number;
+  diameter: number;
+  weight?: number;
+  spool_weight?: number;
+  color_hex?: string;
+  multi_color_hexes?: string;
+  multi_color_direction?: 'coaxial' | 'longitudinal';
+  settings_extruder_temp?: number;
+  settings_bed_temp?: number;
+  comment?: string;
+}
+
+export interface CreateSpoolPayload {
+  filament_id: number;
+  initial_weight?: number;
+  remaining_weight?: number;
+  spool_weight?: number;
+  location?: string;
+  comment?: string;
+  extra?: Record<string, string>;
+}
+
 export interface UpdateTrayPayload {
   spool_id: number;
   active_tray_id: string;
@@ -555,6 +581,41 @@ export class SpoolmanClient {
    */
   async getFilaments(): Promise<Filament[]> {
     return this.fetch('/filament');
+  }
+
+  /**
+   * Create a vendor (manufacturer)
+   */
+  async createVendor(data: { name: string; empty_spool_weight?: number; comment?: string }): Promise<Vendor> {
+    return this.fetch<Vendor>('/vendor', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Create a filament type
+   */
+  async createFilament(data: CreateFilamentPayload): Promise<Filament> {
+    return this.fetch<Filament>('/filament', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Create a spool. Extra field values must already be JSON-encoded strings,
+   * as Spoolman stores them (see parseExtraValue).
+   */
+  async createSpool(data: CreateSpoolPayload): Promise<Spool> {
+    const body: Record<string, unknown> = { ...data };
+    if (data.extra) {
+      body.extra = await this.sanitizeExtra({ ...data.extra });
+    }
+    return this.fetch<Spool>('/spool', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
   }
 
   /**

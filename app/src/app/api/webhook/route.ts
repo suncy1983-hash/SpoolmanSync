@@ -9,6 +9,8 @@ import { getWebhookSecret, isWebhookAuthEnabled, tokensMatch, WEBHOOK_TOKEN_HEAD
 import { isValidTrayUuid, lengthToWeight, classifyTrayState, isActivePrintState } from '@/lib/webhook-helpers';
 import { trayCarriesSpoolSerial } from '@/lib/creality';
 import { applyLocationSync } from '@/lib/spool-location';
+import { AUTO_CREATE_SPOOLS_KEY, isAutoCreateEnabled } from '@/lib/auto-create-spool';
+import { autoCreateAndAssign } from '@/lib/ams-spool-sync';
 
 /**
  * Webhook endpoint for Home Assistant automations
@@ -402,6 +404,37 @@ export async function POST(request: NextRequest) {
             spool: matchedSpool,
             matchedBy: 'spool_serial',
           });
+        }
+      }
+
+      // No spool carries this serial yet. If nothing is assigned to the tray by
+      // hand, register the Bambu spool in Spoolman from the live tray attributes
+      // (vendor/filament/spool + serial + AMS remaining estimate) and assign it.
+      if (isValidTrayUuid(tray_uuid) && await traySupportsSerial(tray_entity_id)) {
+        const alreadyAssigned =
+          spools.find(s => s.extra?.['active_tray'] === JSON.stringify(trayUniqueId)) ??
+          spools.find(s => s.extra?.['active_tray'] === JSON.stringify(tray_entity_id));
+        const autoCreateSetting = await prisma.settings.findUnique({ where: { key: AUTO_CREATE_SPOOLS_KEY } });
+
+        if (!alreadyAssigned && isAutoCreateEnabled(autoCreateSetting?.value)) {
+          try {
+            const result = await autoCreateAndAssign(client, tray_entity_id, trayUniqueId, tray_uuid);
+            if (result) {
+              return NextResponse.json({
+                status: 'success',
+                spool: result.spool,
+                matchedBy: result.created ? 'auto_created' : 'spool_serial',
+              });
+            }
+          } catch (err) {
+            console.error(`Auto-create failed for ${tray_entity_id}:`, err);
+            await createActivityLog({
+              type: 'error',
+              message: `Could not auto-create a Spoolman spool for ${tray_entity_id}`,
+              details: { trayId: tray_entity_id, error: err instanceof Error ? err.message : String(err) },
+            });
+            // Fall through to the regular "assign manually" path.
+          }
         }
       }
 

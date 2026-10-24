@@ -5,6 +5,16 @@ All notable changes to SpoolmanSync will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.14.1] - 2026-10-24 (suncy1983-hash fork)
+
+### Added
+- Auto-create Bambu spools from AMS RFID: when a Bambu spool with an RFID tag is loaded and no Spoolman spool carries its serial, the vendor, filament and spool are created from the tray data (name, material, color, nozzle temps, spool size) and the spool is assigned to the tray. Remaining weight is taken from the AMS estimate, so partly used spools start with a realistic weight.
+- "Sync AMS spools now" button in Settings to register and assign every loaded RFID spool at once.
+- Setting to turn auto-create off. Trays with a hand-assigned spool are never touched.
+
+### Changed
+- The add-on is built locally by the Supervisor from the fork's tagged source instead of pulling the upstream image.
+
 ## [1.6.14] - 2026-10-02
 
 ### Added

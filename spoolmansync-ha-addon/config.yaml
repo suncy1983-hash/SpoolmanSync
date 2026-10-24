@@ -1,9 +1,9 @@
-name: SpoolmanSync
-version: "1.6.14"
+name: SpoolmanSync (auto-create)
+version: "1.6.14.1"
 slug: spoolmansync-ha-addon
-description: Automatic filament tracking for Bambu Lab and Creality printers with Spoolman
-url: https://github.com/gibz104/SpoolmanSync
-image: ghcr.io/gibz104/spoolmansync-addon
+description: SpoolmanSync fork that also adds Bambu RFID spools from the AMS to Spoolman automatically
+url: https://github.com/suncy1983-hash/SpoolmanSync
+# No prebuilt image: the Supervisor builds this add-on locally from Dockerfile.
 arch:
   - aarch64
   - amd64

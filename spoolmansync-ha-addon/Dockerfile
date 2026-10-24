@@ -1,9 +1,22 @@
-# SpoolmanSync Home Assistant Add-on
-# Builds the Next.js app with nginx for HA ingress proxy
+# SpoolmanSync Home Assistant Add-on (suncy1983-hash fork, auto-create spools)
+#
+# Built locally by the Home Assistant Supervisor, whose build context is this
+# add-on folder only. The Next.js app source (../app) is therefore fetched from
+# the fork at the git tag matching the add-on version (v<version>), which also
+# busts the Docker build cache on every version bump.
 
-# Accept BUILD_FROM for Supervisor compatibility but use node:20-alpine
 ARG BUILD_FROM
+ARG BUILD_VERSION
+
 FROM node:20-alpine AS base
+
+# Fetch the app source for this exact version
+FROM alpine:3.20 AS source
+ARG BUILD_VERSION
+RUN apk add --no-cache curl tar
+WORKDIR /src
+RUN curl -fsSL "https://github.com/suncy1983-hash/SpoolmanSync/archive/refs/tags/v${BUILD_VERSION}.tar.gz" \
+    | tar xz --strip-components=1
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -11,14 +24,14 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
-COPY app/package.json app/package-lock.json* ./
+COPY --from=source /src/app/package.json /src/app/package-lock.json ./
 RUN npm ci
 
 # Build stage
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY app/ .
+COPY --from=source /src/app/ .
 
 ENV DATABASE_URL="file:./placeholder.db"
 ENV ADDON_BUILD=true
@@ -49,10 +62,9 @@ COPY --from=builder /app/src/generated ./src/generated
 # Copy all node_modules from deps
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy nginx config and run script
-# Paths are relative to repo root (build context set in CI workflow)
-COPY spoolmansync-ha-addon/rootfs/etc/nginx/http.d/default.conf /etc/nginx/http.d/default.conf
-COPY spoolmansync-ha-addon/rootfs/run.sh /run.sh
+# Copy nginx config and run script (relative to this add-on folder)
+COPY rootfs/etc/nginx/http.d/default.conf /etc/nginx/http.d/default.conf
+COPY rootfs/run.sh /run.sh
 RUN chmod a+x /run.sh
 
 EXPOSE 3000 8099
