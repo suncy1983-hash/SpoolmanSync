@@ -2,8 +2,8 @@
 #
 # Built locally by the Home Assistant Supervisor, whose build context is this
 # add-on folder only. The Next.js app source (../app) is therefore fetched from
-# the fork at the git tag matching the add-on version (v<version>), which also
-# busts the Docker build cache on every version bump.
+# the fork's release branch matching the add-on version (addon-v<version>),
+# which also busts the Docker build cache on every version bump.
 
 ARG BUILD_FROM
 ARG BUILD_VERSION
@@ -15,7 +15,7 @@ FROM alpine:3.20 AS source
 ARG BUILD_VERSION
 RUN apk add --no-cache curl tar
 WORKDIR /src
-RUN curl -fsSL "https://github.com/suncy1983-hash/SpoolmanSync/archive/refs/tags/v${BUILD_VERSION}.tar.gz" \
+RUN curl -fsSL "https://github.com/suncy1983-hash/SpoolmanSync/archive/refs/heads/addon-v${BUILD_VERSION}.tar.gz" \
     | tar xz --strip-components=1
 
 # Install dependencies only when needed

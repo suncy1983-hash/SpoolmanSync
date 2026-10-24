@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Setting to turn auto-create off. Trays with a hand-assigned spool are never touched.
 
 ### Changed
-- The add-on is built locally by the Supervisor from the fork's tagged source instead of pulling the upstream image.
+- The add-on is built locally by the Supervisor from the fork's `addon-v<version>` release branch instead of pulling the upstream image.
 
 ## [1.6.14] - 2026-10-02
 
