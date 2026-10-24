@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [automationsStale, setAutomationsStale] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [amsAction, setAmsAction] = useState<'create' | 'weights' | null>(null);
 
   // Track trays that have filament loaded but no spool assigned
   // Returns list with tray label and AMS-reported filament info
@@ -72,7 +73,7 @@ export default function Dashboard() {
               // Stable unique key: the tray entity_id, falling back to a
               // printer+ams+tray composite if it's somehow missing.
               key: tray.entity_id || `${printer.entity_id}:${ams.entity_id}:${tray.tray_number}`,
-              label: `${printerPrefix}${amsPrefix}Tray ${tray.tray_number}`,
+              label: `${printerPrefix}${amsPrefix}${tray.tray_number}. tálca`,
               name: tray.name,
               material: tray.material,
               color: tray.color,
@@ -117,7 +118,7 @@ export default function Dashboard() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : 'Nem sikerült betölteni az adatokat');
     } finally {
       setLoading(false);
     }
@@ -165,13 +166,15 @@ export default function Dashboard() {
         if (data.type === 'heartbeat') return;
 
         if (data.type === 'usage') {
-          toast.info(`Filament used: ${data.deducted}g from ${data.spoolName || 'spool'}`);
+          toast.info(`Felhasznált filament: ${Math.round(data.deducted * 100) / 100} g (${data.spoolName || 'tekercs'})`);
           fetchData();
         } else if (data.type === 'assign') {
-          toast.success(`Auto-assigned ${data.spoolName || 'spool'} to tray`);
+          toast.success(`${data.spoolName || 'Tekercs'} automatikusan hozzárendelve a tálcához`);
           fetchData();
         } else if (data.type === 'unassign') {
-          toast.info(`Unassigned ${data.spoolName || 'spool'} from tray`);
+          toast.info(`${data.spoolName || 'Tekercs'} levéve a tálcáról`);
+          fetchData();
+        } else if (data.type === 'weight_sync') {
           fetchData();
         } else if (data.type === 'tray_change') {
           fetchData();
@@ -232,13 +235,37 @@ export default function Dashboard() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to assign spool');
+        throw new Error('Nem sikerült hozzárendelni a tekercset');
       }
 
-      toast.success('Spool assigned successfully');
+      toast.success('Tekercs hozzárendelve');
       fetchData(); // Refresh data
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to assign spool');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült hozzárendelni a tekercset');
+    }
+  };
+
+  const runAmsAction = async (action: 'create' | 'weights') => {
+    setAmsAction(action);
+    try {
+      const res = await fetch(action === 'create' ? '/api/spools/sync-ams' : '/api/spools/sync-ams-weights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sikertelen művelet');
+      const errors = data.errors?.length ? `, ${data.errors.length} hiba` : '';
+      if (action === 'create') {
+        toast.success(`Új tekercsek: ${data.created} felvéve, ${data.assigned} hozzárendelve, ${data.alreadyAssigned} már megvolt${errors}`);
+      } else {
+        toast.success(`Súlyok: ${data.updated?.length ?? 0} frissítve, ${data.unchanged} már egyezett, ${data.skipped} kihagyva${errors}`);
+      }
+      await fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sikertelen művelet');
+    } finally {
+      setAmsAction(null);
     }
   };
 
@@ -251,13 +278,13 @@ export default function Dashboard() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to unassign spool');
+        throw new Error('Nem sikerült levenni a tekercset');
       }
 
-      toast.success('Spool unassigned');
+      toast.success('Tekercs levéve');
       await fetchData(); // Refresh data - await to ensure UI updates
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to unassign spool');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült levenni a tekercset');
     }
   };
 
@@ -281,12 +308,12 @@ export default function Dashboard() {
         <main className="w-full max-w-7xl mx-auto py-6 px-3 sm:px-4 md:px-6">
           <Card className="border-destructive">
             <CardHeader>
-              <CardTitle className="text-destructive">Error</CardTitle>
+              <CardTitle className="text-destructive">Hiba</CardTitle>
             </CardHeader>
             <CardContent>
               <p>{error}</p>
               <Button onClick={fetchData} className="mt-4">
-                Retry
+                Újra
               </Button>
             </CardContent>
           </Card>
@@ -303,22 +330,22 @@ export default function Dashboard() {
         <main className="w-full max-w-7xl mx-auto py-6 px-3 sm:px-4 md:px-6">
           <Card>
             <CardHeader>
-              <CardTitle>Welcome to SpoolmanSync</CardTitle>
+              <CardTitle>Üdv a SpoolmanSyncben</CardTitle>
               <CardDescription>
-                Connect your Home Assistant and Spoolman to get started.
+                Kezdéshez kösd be a Home Assistantot és a Spoolmant.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className={`h-3 w-3 rounded-full ${settings?.homeassistant ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span>Home Assistant: {settings?.homeassistant ? 'Connected' : 'Not configured'}</span>
+                <span>Home Assistant: {settings?.homeassistant ? 'Csatlakozva' : 'Nincs beállítva'}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className={`h-3 w-3 rounded-full ${settings?.spoolman ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span>Spoolman: {settings?.spoolman ? 'Connected' : 'Not configured'}</span>
+                <span>Spoolman: {settings?.spoolman ? 'Csatlakozva' : 'Nincs beállítva'}</span>
               </div>
               <Link href="/settings">
-                <Button>Configure Settings</Button>
+                <Button>Beállítások</Button>
               </Link>
             </CardContent>
           </Card>
@@ -332,18 +359,38 @@ export default function Dashboard() {
       <Nav />
       <main className="w-full max-w-7xl mx-auto py-6 px-3 sm:px-4 md:px-6">
         <div className="mb-4 sm:mb-6 flex items-center justify-between gap-2">
-          <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
-          <Button variant="outline" size="sm" onClick={fetchData}>
-            Refresh
-          </Button>
+          <h1 className="text-xl sm:text-2xl font-bold">Áttekintés</h1>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={amsAction !== null}
+              onClick={() => runAmsAction('create')}
+              title="Az AMS-ben lévő, még fel nem vett Bambu RFID tekercseket felveszi a Spoolmanbe és hozzárendeli"
+            >
+              {amsAction === 'create' ? 'Felvétel…' : 'Új tekercsek az AMS-ből'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={amsAction !== null}
+              onClick={() => runAmsAction('weights')}
+              title="Az AMS-ben lévő RFID tekercsek maradék súlyát felülírja az AMS becslésével"
+            >
+              {amsAction === 'weights' ? 'Frissítés…' : 'Súlyok az AMS-ből'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              Frissítés
+            </Button>
+          </div>
         </div>
 
         {printers.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>No Printers Found</CardTitle>
+              <CardTitle>Nincs nyomtató</CardTitle>
               <CardDescription>
-                Make sure your Bambu Lab printer is connected to Home Assistant via the ha-bambulab integration and added in SpoolmanSync Settings.
+                Ellenőrizd, hogy a Bambu Lab nyomtató be van-e kötve a Home Assistantba a ha-bambulab integrációval, és fel van-e véve a SpoolmanSync beállításaiban.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -365,12 +412,12 @@ export default function Dashboard() {
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
                   />
                 </svg>
-                <AlertTitle>Automations Out of Date</AlertTitle>
+                <AlertTitle>Elavult automatizmusok</AlertTitle>
                 <AlertDescription>
-                  Entity IDs in Home Assistant have changed since automations were last configured.
-                  Tray change detection and filament usage tracking may not work until you reconfigure.{' '}
+                  A Home Assistant entitásazonosítói megváltoztak az automatizmusok legutóbbi beállítása óta.
+                  A tálcaváltás-figyelés és a fogyáskövetés nem biztos, hogy működik, amíg újra nem állítod őket.{' '}
                   <Link href="/automations" className="underline hover:no-underline font-medium">
-                    Reconfigure Automations
+                    Automatizmusok újrabeállítása
                   </Link>
                 </AlertDescription>
               </Alert>
@@ -392,17 +439,17 @@ export default function Dashboard() {
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <AlertTitle>Assign Spools to Trays</AlertTitle>
+                <AlertTitle>Rendelj tekercset a tálcákhoz</AlertTitle>
                 <AlertDescription>
                   <div className="space-y-1">
                     {unassignedTrays.map((tray) => {
                       const details = [tray.material, tray.name].filter(Boolean).join(' - ');
                       return (
                         <div key={tray.key}>
-                          <strong>{tray.label}</strong> has filament but no assigned spool.
+                          <strong>{tray.label}</strong>: van benne filament, de nincs hozzárendelt tekercs.
                           {details && (
                             <span>
-                              {' '}AMS reports: {details}
+                              {' '}AMS szerint: {details}
                               {tray.color && (
                                 <span
                                   className="inline-block w-3 h-3 rounded-full ml-1 align-middle border border-border"
@@ -415,8 +462,8 @@ export default function Dashboard() {
                       );
                     })}
                     <div className="mt-1">
-                      Click on the tray card below to select which Spoolman spool is loaded.
-                      This ensures accurate filament tracking when prints complete.
+                      Kattints lent a tálcára, és válaszd ki, melyik Spoolman tekercs van benne.
+                      Így a nyomtatások után pontos lesz a fogyáskövetés.
                     </div>
                   </div>
                 </AlertDescription>
@@ -439,7 +486,7 @@ export default function Dashboard() {
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
                   />
                 </svg>
-                <AlertTitle>Low Filament Stock</AlertTitle>
+                <AlertTitle>Fogyóban lévő filament</AlertTitle>
                 <AlertDescription>
                   <div className="space-y-1">
                     {lowFilamentAlerts.map((alert) => (
@@ -454,8 +501,8 @@ export default function Dashboard() {
                           <strong>{alert.groupLabel}</strong>
                           {' '}&mdash;{' '}
                           {alert.spoolCount === 1
-                            ? `${alert.lowestRemaining}g remaining`
-                            : `${alert.spoolCount} spools, lowest: ${alert.lowestRemaining}g`
+                            ? `${alert.lowestRemaining} g maradt`
+                            : `${alert.spoolCount} tekercs, a legkevesebb: ${alert.lowestRemaining} g`
                           }
                           {alert.lowestPercentage > 0 && ` (${alert.lowestPercentage}%)`}
                         </span>
@@ -463,7 +510,7 @@ export default function Dashboard() {
                     ))}
                     <div className="mt-1">
                       <Link href="/settings" className="underline hover:no-underline">
-                        Configure alerts in Settings
+                        Riasztások beállítása
                       </Link>
                     </div>
                   </div>

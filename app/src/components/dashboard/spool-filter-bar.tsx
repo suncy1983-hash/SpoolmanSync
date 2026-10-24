@@ -69,7 +69,7 @@ export function SpoolFilterBar({
                 <SelectValue placeholder={field.name} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_VALUE}>All {field.name}</SelectItem>
+                <SelectItem value={ALL_VALUE}>Összes ({field.name})</SelectItem>
                 {field.values.map((v) => (
                   <SelectItem key={v} value={v}>
                     {v}
@@ -87,7 +87,7 @@ export function SpoolFilterBar({
               onClick={onClearAll}
               className="h-8 text-xs text-muted-foreground hover:text-foreground"
             >
-              Clear all
+              Szűrők törlése
             </Button>
           )}
         </div>

@@ -145,17 +145,17 @@ function SettingsContent() {
     const error = searchParams.get('error');
 
     if (success === 'ha_connected') {
-      toast.success('Home Assistant connected successfully');
+      toast.success('Home Assistant csatlakoztatva');
       window.history.replaceState({}, '', '/settings');
     } else if (error) {
       const errorMessages: Record<string, string> = {
-        missing_params: 'OAuth callback missing parameters',
-        invalid_state: 'Invalid OAuth state - please try again',
-        token_exchange_failed: 'Failed to exchange authorization code',
-        oauth_failed: 'OAuth authentication failed',
-        ha_unreachable: 'The SpoolmanSync container could not reach Home Assistant. Your browser reaching it is not enough - check Docker networking and firewall rules.',
+        missing_params: 'Az OAuth visszahívásból hiányoznak paraméterek',
+        invalid_state: 'Érvénytelen OAuth állapot – próbáld újra',
+        token_exchange_failed: 'Nem sikerült beváltani az engedélyezési kódot',
+        oauth_failed: 'Sikertelen OAuth hitelesítés',
+        ha_unreachable: 'A SpoolmanSync konténer nem éri el a Home Assistantot. Nem elég, hogy a böngésződ eléri – ellenőrizd a Docker hálózatot és a tűzfalat.',
       };
-      toast.error(errorMessages[error] || 'Authentication failed');
+      toast.error(errorMessages[error] || 'Sikertelen hitelesítés');
       window.history.replaceState({}, '', '/settings');
     }
   }, [searchParams]);
@@ -248,7 +248,7 @@ function SettingsContent() {
         setSavedUnassignedLocation(data.unassignedSpoolLocation);
       }
     } catch {
-      toast.error('Failed to load settings');
+      toast.error('Nem sikerült betölteni a beállításokat');
     } finally {
       setLoading(false);
     }
@@ -277,13 +277,13 @@ function SettingsContent() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to remove printer');
+        throw new Error('Nem sikerült eltávolítani a nyomtatót');
       }
 
-      toast.success('Printer removed');
+      toast.success('Nyomtató eltávolítva');
       fetchPrinters();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove printer');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült eltávolítani a nyomtatót');
     } finally {
       setRemovingPrinter(null);
     }
@@ -299,13 +299,13 @@ function SettingsContent() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to re-add printer');
+        throw new Error('Nem sikerült visszavenni a nyomtatót');
       }
 
-      toast.success('Printer added back to SpoolmanSync');
+      toast.success('Nyomtató visszavéve a SpoolmanSyncbe');
       fetchPrinters();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to re-add printer');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült visszavenni a nyomtatót');
     } finally {
       setReaddingPrinter(null);
     }
@@ -313,7 +313,7 @@ function SettingsContent() {
 
   const connectHomeAssistant = async () => {
     if (!haUrl) {
-      toast.error('Please enter your Home Assistant URL');
+      toast.error('Add meg a Home Assistant címét');
       return;
     }
 
@@ -323,12 +323,12 @@ function SettingsContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to start authentication');
+        throw new Error(data.error || 'Nem sikerült elindítani a hitelesítést');
       }
 
       window.location.href = data.authUrl;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to connect to Home Assistant');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült csatlakozni a Home Assistanthoz');
       setConnecting(false);
     }
   };
@@ -343,14 +343,14 @@ function SettingsContent() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to disconnect');
+        throw new Error('Nem sikerült bontani a kapcsolatot');
       }
 
-      toast.success('Home Assistant disconnected');
+      toast.success('Home Assistant leválasztva');
       setSettings(prev => prev ? { ...prev, homeassistant: null } : null);
       setHaUrl('');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to disconnect');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült bontani a kapcsolatot');
     } finally {
       setSaving(null);
     }
@@ -359,9 +359,9 @@ function SettingsContent() {
   const copyToClipboard = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied to clipboard`);
+      toast.success(`${label} a vágólapra másolva`);
     } catch {
-      toast.error('Failed to copy to clipboard');
+      toast.error('Nem sikerült a vágólapra másolni');
     }
   };
 
@@ -375,12 +375,12 @@ function SettingsContent() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to reveal password');
+        throw new Error(data.error || 'Nem sikerült megjeleníteni a jelszót');
       }
       const data = await res.json();
       setRevealedPassword(data.password ?? '');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reveal password');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült megjeleníteni a jelszót');
     } finally {
       setRevealingPassword(false);
     }
@@ -388,7 +388,7 @@ function SettingsContent() {
 
   const reconnectHomeAssistant = async () => {
     if (!reconnectPassword) {
-      toast.error('Please enter the Home Assistant password');
+      toast.error('Add meg a Home Assistant jelszavát');
       return;
     }
 
@@ -407,15 +407,15 @@ function SettingsContent() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to reconnect');
+        throw new Error(data.error || 'Nem sikerült újracsatlakozni');
       }
 
-      toast.success('Reconnected to Home Assistant');
+      toast.success('Újracsatlakozva a Home Assistanthoz');
       setReconnectPassword('');
       setReconnectError('');
       fetchSettings();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to reconnect';
+      const message = err instanceof Error ? err.message : 'Nem sikerült újracsatlakozni';
       setReconnectError(message);
       toast.error(message);
     } finally {
@@ -437,13 +437,13 @@ function SettingsContent() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to save');
+        throw new Error(data.error || 'Nem sikerült menteni');
       }
 
-      toast.success('Spoolman connected successfully');
+      toast.success('Spoolman csatlakoztatva');
       fetchSettings();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to connect to Spoolman');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült csatlakozni a Spoolmanhez');
     } finally {
       setSaving(null);
     }
@@ -475,13 +475,13 @@ function SettingsContent() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to save filter configuration');
+        throw new Error('Nem sikerült menteni a szűrőbeállításokat');
       }
 
       setEnabledFilters(newConfig);
-      toast.success('Filter settings saved');
+      toast.success('Szűrőbeállítások mentve');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save filter settings');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült menteni a szűrőbeállításokat');
     } finally {
       setSavingFilters(false);
     }
@@ -530,14 +530,14 @@ function SettingsContent() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to save alert settings');
+        throw new Error('Nem sikerült menteni a riasztási beállításokat');
       }
 
       const data = await res.json();
       if (data.alerts) setActiveAlerts(data.alerts);
-      toast.success('Alert settings saved');
+      toast.success('Riasztási beállítások mentve');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save alert settings');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült menteni a riasztási beállításokat');
     } finally {
       setSavingAlerts(false);
     }
@@ -572,12 +572,12 @@ function SettingsContent() {
       if (!res.ok) throw new Error();
       toast.success(
         granularity === 'ams'
-          ? 'Spools will be filed by AMS unit'
-          : 'Spools will be filed by individual tray'
+          ? 'A tekercsek helye AMS egységenként lesz megadva'
+          : 'A tekercsek helye tálcánként lesz megadva'
       );
     } catch {
       setLocationGranularity(previous);
-      toast.error('Failed to save location detail');
+      toast.error('Nem sikerült menteni a hely részletességét');
     }
   };
 
@@ -601,12 +601,12 @@ function SettingsContent() {
       setSavedUnassignedLocation(saved);
       toast.success(
         saved
-          ? `Unassigned spools will be moved to "${saved}"`
-          : 'Unassigned spools will have their location cleared'
+          ? `A levett tekercsek helye: "${saved}"`
+          : 'A levett tekercsek helye törlődik'
       );
     } catch {
       setUnassignedSpoolLocation(savedUnassignedLocation);
-      toast.error('Failed to save setting');
+      toast.error('Nem sikerült menteni a beállítást');
     }
   };
 
@@ -625,7 +625,7 @@ function SettingsContent() {
   const createVirtualPrinter = async () => {
     const name = newVpName.trim();
     if (!name) {
-      toast.error('Please enter a name for the virtual printer');
+      toast.error('Adj nevet a virtuális nyomtatónak');
       return;
     }
 
@@ -639,15 +639,15 @@ function SettingsContent() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to create virtual printer');
+        throw new Error(data.error || 'Nem sikerült létrehozni a virtuális nyomtatót');
       }
 
-      toast.success('Virtual printer created');
+      toast.success('Virtuális nyomtató létrehozva');
       setNewVpName('');
       setNewVpSlotCount(1);
       fetchVirtualPrinters();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create virtual printer');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült létrehozni a virtuális nyomtatót');
     } finally {
       setCreatingVp(false);
     }
@@ -668,13 +668,13 @@ function SettingsContent() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to update virtual printer');
+        throw new Error(data.error || 'Nem sikerült módosítani a virtuális nyomtatót');
       }
 
       toast.success(successMessage);
       fetchVirtualPrinters();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update virtual printer');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült módosítani a virtuális nyomtatót');
     } finally {
       setMutatingVp(null);
     }
@@ -683,23 +683,23 @@ function SettingsContent() {
   const renameVirtualPrinter = (vp: VirtualPrinter) => {
     const name = (editingVpName[vp.id] ?? vp.name).trim();
     if (!name) {
-      toast.error('Name cannot be empty');
+      toast.error('A név nem lehet üres');
       return;
     }
     if (name === vp.name) return;
-    patchVirtualPrinter(vp.id, { name }, 'Virtual printer renamed');
+    patchVirtualPrinter(vp.id, { name }, 'Virtuális nyomtató átnevezve');
   };
 
   const addVirtualPrinterSlot = (vp: VirtualPrinter) => {
     if (vp.slots.length >= 16) {
-      toast.error('Maximum of 16 slots');
+      toast.error('Legfeljebb 16 hely lehet');
       return;
     }
-    patchVirtualPrinter(vp.id, { action: 'addSlot' }, 'Slot added');
+    patchVirtualPrinter(vp.id, { action: 'addSlot' }, 'Hely hozzáadva');
   };
 
   const removeVirtualPrinterSlot = (vp: VirtualPrinter, slotNumber: number) => {
-    patchVirtualPrinter(vp.id, { action: 'removeSlot', slotNumber }, 'Slot removed');
+    patchVirtualPrinter(vp.id, { action: 'removeSlot', slotNumber }, 'Hely eltávolítva');
   };
 
   const deleteVirtualPrinter = async (vp: VirtualPrinter) => {
@@ -716,13 +716,13 @@ function SettingsContent() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to delete virtual printer');
+        throw new Error(data.error || 'Nem sikerült törölni a virtuális nyomtatót');
       }
 
-      toast.success('Virtual printer deleted');
+      toast.success('Virtuális nyomtató törölve');
       fetchVirtualPrinters();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete virtual printer');
+      toast.error(err instanceof Error ? err.message : 'Nem sikerült törölni a virtuális nyomtatót');
     } finally {
       setMutatingVp(null);
     }
@@ -745,7 +745,7 @@ function SettingsContent() {
     <div className="min-h-screen bg-background">
       <Nav />
       <main className="w-full max-w-2xl mx-auto py-6 px-3 sm:px-4 md:px-6">
-        <h1 className="text-xl sm:text-2xl font-bold mb-6">Settings</h1>
+        <h1 className="text-xl sm:text-2xl font-bold mb-6">Beállítások</h1>
 
         <div className="space-y-6">
           {/* Home Assistant Settings */}
@@ -760,7 +760,7 @@ function SettingsContent() {
                 <CardTitle>Home Assistant</CardTitle>
                 {settings?.embeddedMode && (
                   <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
-                    Embedded
+                    Beépített
                   </span>
                 )}
                 {settings?.addonMode && (
@@ -774,7 +774,7 @@ function SettingsContent() {
                   ? 'Connected automatically via Home Assistant Supervisor.'
                   : settings?.embeddedMode
                     ? 'Home Assistant is bundled with SpoolmanSync and auto-configured.'
-                    : 'Connect to your Home Assistant instance to discover Bambu Lab printers.'}
+                    : 'Csatlakozz a Home Assistanthoz a Bambu Lab nyomtatók felderítéséhez.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -784,23 +784,23 @@ function SettingsContent() {
                   {settings?.homeassistant ? (
                     <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <div>
-                        <p className="font-medium text-green-600 dark:text-green-400">Connected via Supervisor</p>
+                        <p className="font-medium text-green-600 dark:text-green-400">Csatlakozva a Supervisoron keresztül</p>
                         <p className="text-sm text-muted-foreground">
-                          SpoolmanSync is running as a Home Assistant add-on with automatic API access.
+                          A SpoolmanSync Home Assistant add-onként fut, automatikus API-hozzáféréssel.
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                      <p className="font-medium text-yellow-700 dark:text-yellow-400">Connecting to Home Assistant...</p>
+                      <p className="font-medium text-yellow-700 dark:text-yellow-400">Csatlakozás a Home Assistanthoz...</p>
                       <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-1">
-                        The Supervisor connection is being established.
+                        A Supervisor kapcsolat felépítése folyamatban.
                       </p>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    The Bambu Lab integration must be installed via HACS in your Home Assistant instance.
-                    Add your printers in the Bambu Lab section below.
+                    A Bambu Lab integrációt HACS-ból kell telepíteni a Home Assistantba.
+                    A nyomtatókat lent, a Bambu Lab résznél veheted fel.
                   </p>
                 </div>
               ) : settings?.embeddedMode ? (
@@ -811,7 +811,7 @@ function SettingsContent() {
                     <>
                       <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                         <div>
-                          <p className="font-medium text-green-600 dark:text-green-400">Connected</p>
+                          <p className="font-medium text-green-600 dark:text-green-400">Csatlakozva</p>
                           <p className="text-sm text-muted-foreground">{settings.homeassistant.url}</p>
                         </div>
                       </div>
@@ -820,7 +820,7 @@ function SettingsContent() {
                       {settings.homeassistant.adminCredentials ? (
                         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg space-y-3">
                           <div>
-                            <p className="font-medium text-blue-700 dark:text-blue-300">Home Assistant Login</p>
+                            <p className="font-medium text-blue-700 dark:text-blue-300">Home Assistant bejelentkezés</p>
                             <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
                               Use these credentials to access Home Assistant directly at{' '}
                               <a
@@ -836,7 +836,7 @@ function SettingsContent() {
 
                           <div className="grid gap-2">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                              <span className="text-sm text-muted-foreground">Username:</span>
+                              <span className="text-sm text-muted-foreground">Felhasználónév:</span>
                               <div className="flex items-center gap-2">
                                 <code className="px-2 py-1 bg-background rounded text-sm truncate max-w-[150px] sm:max-w-none">
                                   {settings.homeassistant.adminCredentials.username}
@@ -847,13 +847,13 @@ function SettingsContent() {
                                   className="h-7 px-2 shrink-0"
                                   onClick={() => copyToClipboard(settings.homeassistant!.adminCredentials!.username, 'Username')}
                                 >
-                                  Copy
+                                  Másolás
                                 </Button>
                               </div>
                             </div>
                             {settings.homeassistant.adminCredentials.hasPassword ? (
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                                <span className="text-sm text-muted-foreground">Password:</span>
+                                <span className="text-sm text-muted-foreground">Jelszó:</span>
                                 <div className="flex items-center gap-2">
                                   <code className="px-2 py-1 bg-background rounded text-sm font-mono truncate max-w-[150px] sm:max-w-none">
                                     {revealedPassword !== null ? revealedPassword : '••••••••••••'}
@@ -866,7 +866,7 @@ function SettingsContent() {
                                         className="h-7 px-2 shrink-0"
                                         onClick={() => setRevealedPassword(null)}
                                       >
-                                        Hide
+                                        Elrejtés
                                       </Button>
                                       <Button
                                         variant="ghost"
@@ -874,7 +874,7 @@ function SettingsContent() {
                                         className="h-7 px-2 shrink-0"
                                         onClick={() => copyToClipboard(revealedPassword, 'Password')}
                                       >
-                                        Copy
+                                        Másolás
                                       </Button>
                                     </>
                                   ) : (
@@ -885,28 +885,28 @@ function SettingsContent() {
                                       onClick={revealPassword}
                                       disabled={revealingPassword}
                                     >
-                                      {revealingPassword ? 'Revealing...' : 'Reveal password'}
+                                      {revealingPassword ? 'Megjelenítés...' : 'Jelszó megjelenítése'}
                                     </Button>
                                   )}
                                 </div>
                               </div>
                             ) : (
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                                <span className="text-sm text-muted-foreground">Password:</span>
+                                <span className="text-sm text-muted-foreground">Jelszó:</span>
                                 <span className="text-sm text-muted-foreground italic">
-                                  No stored password available
+                                  Nincs tárolt jelszó
                                 </span>
                               </div>
                             )}
                           </div>
 
                           <p className="text-xs text-muted-foreground pt-2 border-t border-blue-200 dark:border-blue-800">
-                            If you change the password in Home Assistant, you can reconnect here using the new password.
+                            Ha megváltoztatod a jelszót a Home Assistantban, itt az új jelszóval újracsatlakozhatsz.
                           </p>
                         </div>
                       ) : (
                         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                          <p className="font-medium text-blue-700 dark:text-blue-300">Home Assistant Login</p>
+                          <p className="font-medium text-blue-700 dark:text-blue-300">Home Assistant bejelentkezés</p>
                           <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
                             No stored admin credentials are available. You can still access Home Assistant directly at{' '}
                             <a
@@ -926,17 +926,17 @@ function SettingsContent() {
                     // State 3: Connection broken (token invalid, password may have changed)
                     <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg space-y-3">
                       <div>
-                        <p className="font-medium text-orange-700 dark:text-orange-400">Connection Lost</p>
+                        <p className="font-medium text-orange-700 dark:text-orange-400">Megszakadt a kapcsolat</p>
                         <p className="text-sm text-orange-600 dark:text-orange-500 mt-1">
-                          The Home Assistant connection token is no longer valid.
-                          This usually happens after changing the HA password.
-                          Enter your current Home Assistant credentials to reconnect.
+                          A Home Assistant kapcsolati token már nem érvényes.
+                          Ez általában a HA jelszó megváltoztatása után fordul elő.
+                          Add meg a jelenlegi Home Assistant belépési adataidat az újracsatlakozáshoz.
                         </p>
                       </div>
 
                       <div className="space-y-3">
                         <div className="space-y-1">
-                          <Label htmlFor="reconnect-username">Username</Label>
+                          <Label htmlFor="reconnect-username">Felhasználónév</Label>
                           <Input
                             id="reconnect-username"
                             value={reconnectUsername}
@@ -944,13 +944,13 @@ function SettingsContent() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label htmlFor="reconnect-password">Password</Label>
+                          <Label htmlFor="reconnect-password">Jelszó</Label>
                           <Input
                             id="reconnect-password"
                             type="password"
                             value={reconnectPassword}
                             onChange={(e) => setReconnectPassword(e.target.value)}
-                            placeholder="Enter your HA password"
+                            placeholder="HA jelszó"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') reconnectHomeAssistant();
                             }}
@@ -970,29 +970,29 @@ function SettingsContent() {
                   ) : !settings?.homeassistant ? (
                     // State 2: HA still starting up (no connection yet)
                     <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                      <p className="font-medium text-yellow-700 dark:text-yellow-400">Connecting to Home Assistant...</p>
+                      <p className="font-medium text-yellow-700 dark:text-yellow-400">Csatlakozás a Home Assistanthoz...</p>
                       <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-1">
-                        Home Assistant is starting up and being configured automatically.
-                        This may take up to a minute on first run.
+                        A Home Assistant indul, és automatikusan beállítja magát.
+                        Első indításkor ez akár egy percig is tarthat.
                       </p>
                       <div className="flex items-center gap-2 mt-3">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600" />
                         <Button variant="outline" size="sm" onClick={fetchSettings}>
-                          Refresh Status
+                          Állapot frissítése
                         </Button>
                       </div>
                     </div>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
-                    The embedded Home Assistant is pre-configured with HACS and the Bambu Lab integration.
-                    Add your printers in the Bambu Lab section below.
+                    A beépített Home Assistantban a HACS és a Bambu Lab integráció előre be van állítva.
+                    A nyomtatókat lent, a Bambu Lab résznél veheted fel.
                   </p>
                 </div>
               ) : settings?.homeassistant ? (
                 // External mode - connected
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div>
-                    <p className="font-medium">Connected</p>
+                    <p className="font-medium">Csatlakozva</p>
                     <p className="text-sm text-muted-foreground">{settings.homeassistant.url}</p>
                   </div>
                   <Button
@@ -1007,7 +1007,7 @@ function SettingsContent() {
                 // External mode - not connected
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="ha-url">Home Assistant URL</Label>
+                    <Label htmlFor="ha-url">Home Assistant címe</Label>
                     <Input
                       id="ha-url"
                       placeholder="http://homeassistant.local:8123"
@@ -1015,14 +1015,14 @@ function SettingsContent() {
                       onChange={(e) => setHaUrl(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Enter your Home Assistant URL, then click Connect to authorize.
+                      Add meg a Home Assistant címét, majd kattints a Csatlakozásra az engedélyezéshez.
                     </p>
                   </div>
                   <Button
                     onClick={connectHomeAssistant}
                     disabled={connecting || !haUrl}
                   >
-                    {connecting ? 'Redirecting...' : 'Connect with Home Assistant'}
+                    {connecting ? 'Átirányítás...' : 'Csatlakozás a Home Assistanthoz'}
                   </Button>
                 </>
               )}
@@ -1037,13 +1037,13 @@ function SettingsContent() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Bambu Lab Printers</CardTitle>
+                    <CardTitle>Bambu Lab nyomtatók</CardTitle>
                     <CardDescription>
-                      Configure your Bambu Lab printers to sync with Spoolman.
+                      A Spoolmannel szinkronizált Bambu Lab nyomtatók beállítása.
                     </CardDescription>
                   </div>
                   <Button onClick={() => setAddPrinterOpen(true)}>
-                    Add Printer
+                    Nyomtató hozzáadása
                   </Button>
                 </div>
               </CardHeader>
@@ -1051,8 +1051,8 @@ function SettingsContent() {
                 <div className="space-y-3">
                   {printers.length === 0 && hiddenPrinters.length === 0 && (
                     <div className="text-center py-6 text-muted-foreground">
-                      <p>No printers configured yet.</p>
-                      <p className="text-sm mt-1">Click &quot;Add Printer&quot; to connect your Bambu Lab printer.</p>
+                      <p>Még nincs beállított nyomtató.</p>
+                      <p className="text-sm mt-1">Kattints a &quot;Nyomtató hozzáadása&quot; gombra a Bambu Lab nyomtató bekötéséhez.</p>
                     </div>
                   )}
                   {printers.map((printer) => (
@@ -1064,7 +1064,7 @@ function SettingsContent() {
                         <p className="font-medium">{printer.title}</p>
                         <p className="text-sm text-muted-foreground">
                           {printer.state === 'loaded' ? (
-                            <span className="text-green-600 dark:text-green-400">Connected</span>
+                            <span className="text-green-600 dark:text-green-400">Csatlakozva</span>
                           ) : (
                             <span className="text-yellow-600 dark:text-yellow-400">{printer.state}</span>
                           )}
@@ -1083,7 +1083,7 @@ function SettingsContent() {
                   {hiddenPrinters.length > 0 && (
                     <div className={printers.length > 0 ? 'pt-2 border-t' : ''}>
                       <p className="text-xs text-muted-foreground mb-2">
-                        Removed from SpoolmanSync (still in Home Assistant):
+                        Eltávolítva a SpoolmanSyncből (a Home Assistantban még megvan):
                       </p>
                       {hiddenPrinters.map((printer) => (
                         <div
@@ -1099,7 +1099,7 @@ function SettingsContent() {
                             onClick={() => readdPrinter(printer.entry_id)}
                             disabled={readdingPrinter === printer.entry_id}
                           >
-                            {readdingPrinter === printer.entry_id ? 'Adding...' : 'Re-add'}
+                            {readdingPrinter === printer.entry_id ? 'Hozzáadás...' : 'Visszavétel'}
                           </Button>
                         </div>
                       ))}
@@ -1107,7 +1107,7 @@ function SettingsContent() {
                   )}
                   {settings?.webhookConfigured && (
                     <p className="text-xs text-muted-foreground pt-2 border-t">
-                      Webhook authentication: enabled
+                      Webhook hitelesítés: bekapcsolva
                     </p>
                   )}
                 </div>
@@ -1120,18 +1120,18 @@ function SettingsContent() {
           {/* Virtual Printers */}
           <Card>
             <CardHeader>
-              <CardTitle>Virtual Printers</CardTitle>
+              <CardTitle>Virtuális nyomtatók</CardTitle>
               <CardDescription>
-                Define storage locations such as filament dryers, dry boxes, or shelves with assignable slots.
-                They appear on the dashboard as assignable slots for QR/NFC inventory management and are not tracked for usage.
+                Tárolóhelyek – például szárító, száraz doboz vagy polc – hozzárendelhető helyekkel.
+                Az áttekintésben hozzárendelhető helyként jelennek meg a QR/NFC készletkezeléshez; fogyást nem követnek.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {virtualPrinters.length === 0 && (
                   <div className="text-center py-6 text-muted-foreground">
-                    <p>No virtual printers yet.</p>
-                    <p className="text-sm mt-1">Create one below to track filament that isn&apos;t in a printer.</p>
+                    <p>Még nincs virtuális nyomtató.</p>
+                    <p className="text-sm mt-1">Hozz létre egyet lent a nyomtatón kívül tárolt filamentekhez.</p>
                   </div>
                 )}
 
@@ -1157,13 +1157,13 @@ function SettingsContent() {
                         onClick={() => deleteVirtualPrinter(vp)}
                         disabled={mutatingVp === vp.id}
                       >
-                        Delete
+                        Törlés
                       </Button>
                     </div>
 
                     <div>
                       <p className="text-xs text-muted-foreground mb-2">
-                        {vp.slots.length} slot{vp.slots.length !== 1 ? 's' : ''}
+                        {vp.slots.length} hely
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {vp.slots.map((slot) => (
@@ -1171,10 +1171,10 @@ function SettingsContent() {
                             key={slot.id}
                             className="inline-flex items-center gap-1 px-2 py-1 bg-background rounded text-sm"
                           >
-                            Tray {slot.number}
+                            {slot.number}. hely
                             <button
                               type="button"
-                              aria-label={`Remove Tray ${slot.number}`}
+                              aria-label={`${slot.number}. hely eltávolítása`}
                               className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                               onClick={() => removeVirtualPrinterSlot(vp, slot.number)}
                               disabled={mutatingVp === vp.id}
@@ -1190,7 +1190,7 @@ function SettingsContent() {
                           onClick={() => addVirtualPrinterSlot(vp)}
                           disabled={mutatingVp === vp.id || vp.slots.length >= 16}
                         >
-                          + Add slot
+                          + Hely hozzáadása
                         </Button>
                       </div>
                     </div>
@@ -1199,13 +1199,13 @@ function SettingsContent() {
 
                 {/* Create new virtual printer */}
                 <div className="pt-3 border-t space-y-3">
-                  <p className="text-sm font-medium">Add a virtual printer</p>
+                  <p className="text-sm font-medium">Virtuális nyomtató hozzáadása</p>
                   <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
                     <div className="flex-1 space-y-1">
-                      <Label htmlFor="new-vp-name">Name</Label>
+                      <Label htmlFor="new-vp-name">Név</Label>
                       <Input
                         id="new-vp-name"
-                        placeholder="e.g., Dry Box A"
+                        placeholder="pl. Száraz doboz A"
                         value={newVpName}
                         onChange={(e) => setNewVpName(e.target.value)}
                         onKeyDown={(e) => {
@@ -1222,12 +1222,12 @@ function SettingsContent() {
                       )}
                       {existingLocations.length > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          Tip: pick an existing Spoolman location to keep names in sync.
+                          Tipp: válassz meglévő Spoolman helyet, hogy a nevek egyezzenek.
                         </p>
                       )}
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="new-vp-slots">Slots</Label>
+                      <Label htmlFor="new-vp-slots">Helyek</Label>
                       <Input
                         id="new-vp-slots"
                         type="number"
@@ -1245,7 +1245,7 @@ function SettingsContent() {
                       onClick={createVirtualPrinter}
                       disabled={creatingVp || !newVpName.trim()}
                     >
-                      {creatingVp ? 'Creating...' : 'Create'}
+                      {creatingVp ? 'Létrehozás...' : 'Létrehozás'}
                     </Button>
                   </div>
                 </div>
@@ -1263,12 +1263,12 @@ function SettingsContent() {
                 <CardTitle>Spoolman</CardTitle>
               </div>
               <CardDescription>
-                Connect to your Spoolman instance to manage filament spools.
+                Csatlakozz a Spoolmanhez a filament tekercsek kezeléséhez.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="spoolman-url">Spoolman URL</Label>
+                <Label htmlFor="spoolman-url">Spoolman címe</Label>
                 <Input
                   id="spoolman-url"
                   placeholder="http://localhost:7912"
@@ -1280,7 +1280,7 @@ function SettingsContent() {
                 onClick={saveSpoolmanSettings}
                 disabled={saving === 'spoolman' || !spoolmanUrl}
               >
-                {saving === 'spoolman' ? 'Connecting...' : settings?.spoolman ? 'Update Connection' : 'Connect'}
+                {saving === 'spoolman' ? 'Csatlakozás...' : settings?.spoolman ? 'Kapcsolat frissítése' : 'Csatlakozás'}
               </Button>
             </CardContent>
           </Card>
@@ -1291,9 +1291,9 @@ function SettingsContent() {
               <Separator />
               <Card>
                 <CardHeader>
-                  <CardTitle>Dashboard Display</CardTitle>
+                  <CardTitle>Megjelenítés és működés</CardTitle>
                   <CardDescription>
-                    Configure what information is shown on the dashboard spool cards.
+                    Mi jelenjen meg a tekercs-kártyákon, és hogyan kezelje a SpoolmanSync a tálcákat.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1311,19 +1311,19 @@ function SettingsContent() {
                             body: JSON.stringify({ type: 'show_spool_location', enabled }),
                           });
                           if (!res.ok) throw new Error();
-                          toast.success(enabled ? 'Spool location enabled on dashboard' : 'Spool location hidden on dashboard');
+                          toast.success(enabled ? 'A tekercs helye megjelenik' : 'A tekercs helye rejtve');
                         } catch {
                           setShowSpoolLocation(!enabled);
-                          toast.error('Failed to save setting');
+                          toast.error('Nem sikerült menteni a beállítást');
                         }
                       }}
                     />
                     <div>
                       <Label htmlFor="show-spool-location" className="text-sm font-medium cursor-pointer">
-                        Show spool location
+                        Tekercs helyének megjelenítése
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        Display the Spoolman location field on each spool card (e.g., shelf, dry box, bin number)
+                        A Spoolman hely mező megjelenítése a tekercs-kártyákon (pl. polc, száraz doboz, rekesz)
                       </p>
                     </div>
                   </div>
@@ -1343,20 +1343,20 @@ function SettingsContent() {
                             body: JSON.stringify({ type: 'auto_create_spools', enabled }),
                           });
                           if (!res.ok) throw new Error();
-                          toast.success(enabled ? 'New Bambu RFID spools will be added to Spoolman automatically' : 'Auto-create of spools turned off');
+                          toast.success(enabled ? 'Az új Bambu RFID tekercsek automatikusan bekerülnek a Spoolmanbe' : 'Automatikus tekercsfelvétel kikapcsolva');
                         } catch {
                           setAutoCreateSpools(!enabled);
-                          toast.error('Failed to save setting');
+                          toast.error('Nem sikerült menteni a beállítást');
                         }
                       }}
                     />
                     <div className="space-y-2">
                       <div>
                         <Label htmlFor="auto-create-spools" className="text-sm font-medium cursor-pointer">
-                          Auto-create Bambu spools from AMS RFID
+                          Bambu tekercsek automatikus felvétele az AMS RFID alapján
                         </Label>
                         <p className="text-xs text-muted-foreground">
-                          When a Bambu spool with an RFID tag is loaded and Spoolman has no spool with its serial, SpoolmanSync creates the vendor, filament and spool (remaining weight from the AMS estimate) and assigns it to the tray. Trays you assigned by hand are never touched.
+                          Ha az AMS-be olyan Bambu RFID tekercs kerül, amelynek sorozatszáma nincs a Spoolmanben, a SpoolmanSync létrehozza a gyártót, a filamentet és a tekercset (a maradék súly az AMS becsléséből), és hozzárendeli a tálcához. A kézzel hozzárendelt tálcákhoz nem nyúl.
                         </p>
                       </div>
                       <Button
@@ -1369,17 +1369,45 @@ function SettingsContent() {
                           try {
                             const res = await fetch('/api/spools/sync-ams', { method: 'POST' });
                             const data = await res.json();
-                            if (!res.ok) throw new Error(data.error || 'AMS sync failed');
-                            const errors = data.errors?.length ? `, ${data.errors.length} errors` : '';
-                            toast.success(`AMS sync: ${data.created} created, ${data.assigned} assigned, ${data.alreadyAssigned} already assigned${errors}`);
+                            if (!res.ok) throw new Error(data.error || 'Sikertelen AMS szinkron');
+                            const errors = data.errors?.length ? `, ${data.errors.length} hiba` : '';
+                            toast.success(`Új tekercsek: ${data.created} felvéve, ${data.assigned} hozzárendelve, ${data.alreadyAssigned} már megvolt${errors}`);
                           } catch (err) {
-                            toast.error(err instanceof Error ? err.message : 'AMS sync failed');
+                            toast.error(err instanceof Error ? err.message : 'Sikertelen AMS szinkron');
                           } finally {
                             setAmsSyncing(false);
                           }
                         }}
                       >
-                        {amsSyncing ? 'Syncing…' : 'Sync AMS spools now'}
+                        {amsSyncing ? 'Felvétel…' : 'Új tekercsek felvétele most'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="ml-2"
+                        disabled={amsSyncing}
+                        title="Az AMS-ben lévő RFID tekercsek maradék súlyát felülírja az AMS becslésével (kb. 1%-os pontosság)"
+                        onClick={async () => {
+                          setAmsSyncing(true);
+                          try {
+                            const res = await fetch('/api/spools/sync-ams-weights', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: '{}',
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Sikertelen súlyfrissítés');
+                            const errors = data.errors?.length ? `, ${data.errors.length} hiba` : '';
+                            toast.success(`Súlyok: ${data.updated?.length ?? 0} frissítve, ${data.unchanged} már egyezett, ${data.skipped} kihagyva${errors}`);
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : 'Sikertelen súlyfrissítés');
+                          } finally {
+                            setAmsSyncing(false);
+                          }
+                        }}
+                      >
+                        Súlyok frissítése az AMS-ből
                       </Button>
                     </div>
                   </div>
@@ -1398,19 +1426,19 @@ function SettingsContent() {
                             body: JSON.stringify({ type: 'never_auto_clear_tray', enabled }),
                           });
                           if (!res.ok) throw new Error();
-                          toast.success(enabled ? 'Tray assignments will no longer be auto-cleared' : 'Auto-clear of tray assignments re-enabled');
+                          toast.success(enabled ? 'A tálca-hozzárendelések nem törlődnek automatikusan' : 'A tálca-hozzárendelések automatikus törlése újra be');
                         } catch {
                           setNeverAutoClearTray(!enabled);
-                          toast.error('Failed to save setting');
+                          toast.error('Nem sikerült menteni a beállítást');
                         }
                       }}
                     />
                     <div>
                       <Label htmlFor="never-auto-clear-tray" className="text-sm font-medium cursor-pointer">
-                        Never auto-clear tray assignments
+                        Tálca-hozzárendelések automatikus törlésének tiltása
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        When enabled, SpoolmanSync will not remove a spool from a tray when the printer briefly reports it empty. Useful for LAN-only setups where the AMS occasionally reports false empty states.
+                        Bekapcsolva a SpoolmanSync nem veszi le a tekercset a tálcáról, ha a nyomtató rövid ideig üresnek jelzi. LAN-only módban hasznos, ahol az AMS néha tévesen üreset jelez.
                       </p>
                     </div>
                   </div>
@@ -1429,19 +1457,19 @@ function SettingsContent() {
                             body: JSON.stringify({ type: 'ignore_color_mismatch', enabled }),
                           });
                           if (!res.ok) throw new Error();
-                          toast.success(enabled ? 'Spool warnings now compare material only' : 'Spool warnings compare material and color again');
+                          toast.success(enabled ? 'A figyelmeztetés csak az anyagot nézi' : 'A figyelmeztetés újra az anyagot és a színt is nézi');
                         } catch {
                           setIgnoreColorMismatch(!enabled);
-                          toast.error('Failed to save setting');
+                          toast.error('Nem sikerült menteni a beállítást');
                         }
                       }}
                     />
                     <div>
                       <Label htmlFor="ignore-color-mismatch" className="text-sm font-medium cursor-pointer">
-                        Ignore color in spool mismatch warnings
+                        Szín figyelmen kívül hagyása a rossz tekercs figyelmeztetésnél
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        The &quot;possible wrong spool&quot; warning compares material only. Useful when your RFID tags report a color the physical spool doesn&apos;t have, which is common with third-party Creality tags.
+                        A &quot;lehet, hogy rossz tekercs&quot; figyelmeztetés csak az anyagot hasonlítja össze. Akkor hasznos, ha az RFID olyan színt jelez, amilyen a tekercs valójában nem (gyakori a külsős Creality tageknél).
                       </p>
                     </div>
                   </div>
@@ -1460,19 +1488,19 @@ function SettingsContent() {
                             body: JSON.stringify({ type: 'sync_spoolman_location', enabled }),
                           });
                           if (!res.ok) throw new Error();
-                          toast.success(enabled ? 'Spool locations will sync to Spoolman' : 'Spool location sync disabled');
+                          toast.success(enabled ? 'A tekercsek helye szinkronizálódik a Spoolmanbe' : 'Hely-szinkron kikapcsolva');
                         } catch {
                           setSyncSpoolmanLocation(!enabled);
-                          toast.error('Failed to save setting');
+                          toast.error('Nem sikerült menteni a beállítást');
                         }
                       }}
                     />
                     <div>
                       <Label htmlFor="sync-spoolman-location" className="text-sm font-medium cursor-pointer">
-                        Sync spool locations to Spoolman
+                        Tekercsek helyének szinkronizálása a Spoolmanbe
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        When enabled, assigning a spool to a tray writes Spoolman&apos;s native location field — real printers as &quot;Printer - AMS 1 Tray 3&quot; by default and virtual printers as their name — so Spoolman reporting shows where every spool is (in a printer or in storage). Only spools you assign/unassign are affected; a location you set by hand is left alone. Applies to future assignments (existing ones update as spools are re-assigned).
+                        Bekapcsolva a tálcához rendelés beírja a Spoolman hely mezőjét – valódi nyomtatónál alapból &quot;Nyomtató - AMS 1 Tray 3&quot;, virtuálisnál a nevét –, így a Spoolmanben látszik, hol van a tekercs. A levételkor törli, de a kézzel beírt helyet soha nem írja felül.
                       </p>
                     </div>
                   </div>
@@ -1483,7 +1511,7 @@ function SettingsContent() {
                   {syncSpoolmanLocation && (
                     <div className="ml-7 space-y-2">
                       <Label htmlFor="location-granularity" className="text-sm font-medium">
-                        Location detail
+                        Hely részletessége
                       </Label>
                       <select
                         id="location-granularity"
@@ -1491,14 +1519,11 @@ function SettingsContent() {
                         onChange={(e) => saveLocationGranularity(e.target.value === 'ams' ? 'ams' : 'tray')}
                         className="flex h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
-                        <option value="tray">Individual tray (Printer - AMS 1 Tray 3)</option>
-                        <option value="ams">AMS unit (Printer - AMS 1)</option>
+                        <option value="tray">Tálcánként (Nyomtató - AMS 1 Tray 3)</option>
+                        <option value="ams">AMS egységenként (Nyomtató - AMS 1)</option>
                       </select>
                       <p className="text-xs text-muted-foreground">
-                        Choose how precise the location is. With AMS unit, every spool in the same
-                        AMS shares one location instead of getting its own tray. External spools and
-                        printers without an AMS are unaffected either way. Changing this updates the
-                        spools SpoolmanSync has already filed, the next time the dashboard loads.
+                        Mennyire legyen pontos a hely. AMS egységenként az egy AMS-ben lévő tekercsek közös helyet kapnak. A külső tekercsekre és az AMS nélküli nyomtatókra nincs hatása. A váltás a már elhelyezett tekercseket is frissíti az áttekintés következő betöltésekor.
                       </p>
                     </div>
                   )}
@@ -1508,13 +1533,13 @@ function SettingsContent() {
                   {syncSpoolmanLocation && (
                     <div className="ml-7 space-y-2">
                       <Label htmlFor="unassigned-spool-location" className="text-sm font-medium">
-                        Location when unassigned
+                        Hely levett tekercsnél
                       </Label>
                       <Input
                         id="unassigned-spool-location"
                         value={unassignedSpoolLocation}
                         maxLength={64}
-                        placeholder="Leave empty to clear the location"
+                        placeholder="Üresen hagyva a hely törlődik"
                         className="max-w-sm"
                         onChange={(e) => setUnassignedSpoolLocation(e.target.value)}
                         onBlur={saveUnassignedLocation}
@@ -1523,11 +1548,7 @@ function SettingsContent() {
                         }}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Optional. When a spool is removed from a tray, park it in this location
-                        instead of clearing the field — so it stays visible in Spoolman rather than
-                        disappearing until you remember to file it. Leave empty to keep the default
-                        behavior of clearing the location. As above, a location you set by hand is
-                        never overwritten.
+                        Opcionális. Ha egy tekercset leveszel a tálcáról, ez lesz a helye a mező törlése helyett, így a Spoolmanben is látszik. Üresen hagyva a hely törlődik. A kézzel beírt helyet soha nem írja felül.
                       </p>
                     </div>
                   )}
@@ -1542,22 +1563,22 @@ function SettingsContent() {
               <Separator />
               <Card>
                 <CardHeader>
-                  <CardTitle>Spool Filter Configuration</CardTitle>
+                  <CardTitle>Tekercs szűrők</CardTitle>
                   <CardDescription>
-                    Choose which fields appear as filter dropdowns when assigning spools to trays.
-                    The search box always searches all fields regardless of this setting.
+                    Mely mezők jelenjenek meg szűrőként a tekercs tálcához rendelésekor.
+                    A keresőmező ettől függetlenül minden mezőben keres.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {filterFields.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      Loading filter options...
+                      Szűrők betöltése...
                     </p>
                   ) : (
                     <div className="space-y-4">
                       {/* Built-in fields */}
                       <div>
-                        <h4 className="text-sm font-medium mb-2 text-muted-foreground">Built-in Fields</h4>
+                        <h4 className="text-sm font-medium mb-2 text-muted-foreground">Beépített mezők</h4>
                         <div className="space-y-3">
                           {filterFields.filter(f => f.builtIn).map((field) => (
                             <div key={field.key} className="flex items-center space-x-3">
@@ -1576,11 +1597,11 @@ function SettingsContent() {
                                 </Label>
                                 {field.values.length > 0 ? (
                                   <p className="text-xs text-muted-foreground">
-                                    {field.values.length} value{field.values.length !== 1 ? 's' : ''}: {field.values.slice(0, 3).join(', ')}{field.values.length > 3 ? '...' : ''}
+                                    {field.values.length} érték: {field.values.slice(0, 3).join(', ')}{field.values.length > 3 ? '...' : ''}
                                   </p>
                                 ) : (
                                   <p className="text-xs text-muted-foreground italic">
-                                    No values set on any spools
+                                    Egyik tekercsen sincs kitöltve
                                   </p>
                                 )}
                               </div>
@@ -1592,7 +1613,7 @@ function SettingsContent() {
                       {/* Extra fields (if any) */}
                       {filterFields.some(f => !f.builtIn) && (
                         <div>
-                          <h4 className="text-sm font-medium mb-2 text-muted-foreground">Custom Extra Fields</h4>
+                          <h4 className="text-sm font-medium mb-2 text-muted-foreground">Egyéni extra mezők</h4>
                           <div className="space-y-3">
                             {filterFields.filter(f => !f.builtIn).map((field) => (
                               <div key={field.key} className="flex items-center space-x-3">
@@ -1611,11 +1632,11 @@ function SettingsContent() {
                                   </Label>
                                   {field.values.length > 0 ? (
                                     <p className="text-xs text-muted-foreground">
-                                      {field.values.length} value{field.values.length !== 1 ? 's' : ''}: {field.values.slice(0, 3).join(', ')}{field.values.length > 3 ? '...' : ''}
+                                      {field.values.length} érték: {field.values.slice(0, 3).join(', ')}{field.values.length > 3 ? '...' : ''}
                                     </p>
                                   ) : (
                                     <p className="text-xs text-muted-foreground italic">
-                                      No values set on any spools
+                                      Egyik tekercsen sincs kitöltve
                                     </p>
                                   )}
                                 </div>
@@ -1627,7 +1648,7 @@ function SettingsContent() {
 
                       {enabledFilters.length === 0 && (
                         <p className="text-xs text-muted-foreground mt-2">
-                          No filters enabled. Only the search box will be shown.
+                          Nincs bekapcsolt szűrő, csak a keresőmező jelenik meg.
                         </p>
                       )}
                     </div>
@@ -1644,14 +1665,14 @@ function SettingsContent() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <CardTitle>Low Filament Alerts</CardTitle>
+                    <CardTitle>Fogyó filament riasztás</CardTitle>
                     {activeAlerts.length > 0 && (
                       <Badge variant="destructive">{activeAlerts.length}</Badge>
                     )}
                   </div>
                   <CardDescription>
-                    Get notified when you&apos;re down to your last spool of a filament type and it&apos;s running low.
-                    Alerts are checked after each print and sent as Home Assistant persistent notifications.
+                    Értesítés, ha egy filament típusból az utolsó tekercs is fogyóban van.
+                    Minden nyomtatás után ellenőrzi, és Home Assistant értesítésként küldi.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1664,7 +1685,7 @@ function SettingsContent() {
                       }
                     />
                     <Label htmlFor="alerts-enabled" className="cursor-pointer">
-                      Enable low filament alerts
+                      Fogyó filament riasztás bekapcsolása
                     </Label>
                   </div>
 
@@ -1672,7 +1693,7 @@ function SettingsContent() {
                     <div className="space-y-4 pl-6">
                       {/* Threshold type */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Threshold type</Label>
+                        <Label className="text-sm font-medium">Küszöb típusa</Label>
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
                             <input
@@ -1685,7 +1706,7 @@ function SettingsContent() {
                               className="h-4 w-4"
                             />
                             <Label htmlFor="threshold-percentage" className="cursor-pointer text-sm">
-                              Percentage remaining
+                              Maradék százalékban
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1699,7 +1720,7 @@ function SettingsContent() {
                               className="h-4 w-4"
                             />
                             <Label htmlFor="threshold-grams" className="cursor-pointer text-sm">
-                              Absolute weight (grams)
+                              Súly grammban
                             </Label>
                           </div>
                         </div>
@@ -1708,7 +1729,7 @@ function SettingsContent() {
                       {/* Threshold value */}
                       <div className="space-y-2">
                         <Label htmlFor="threshold-value" className="text-sm font-medium">
-                          Alert when below {alertConfig.thresholdType === 'percentage' ? '(%)' : '(grams)'}
+                          Riasztás ez alatt: {alertConfig.thresholdType === 'percentage' ? '(%)' : '(gramm)'}
                         </Label>
                         <Input
                           id="threshold-value"
@@ -1725,7 +1746,7 @@ function SettingsContent() {
 
                       {/* Grouping strategy */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Group spools by</Label>
+                        <Label className="text-sm font-medium">Tekercsek csoportosítása</Label>
                         <div className="space-y-2">
                           <div className="flex items-start space-x-2">
                             <input
@@ -1742,10 +1763,10 @@ function SettingsContent() {
                             />
                             <div>
                               <Label htmlFor="group-material" className="cursor-pointer text-sm">
-                                Material
+                                Anyag
                               </Label>
                               <p className="text-xs text-muted-foreground">
-                                Alert when all PLA spools are low, all PETG spools are low, etc.
+                                Riasztás, ha az összes PLA, az összes PETG stb. tekercs fogyóban van.
                               </p>
                             </div>
                           </div>
@@ -1764,10 +1785,10 @@ function SettingsContent() {
                             />
                             <div>
                               <Label htmlFor="group-material-color" className="cursor-pointer text-sm">
-                                Material + Name
+                                Anyag + név
                               </Label>
                               <p className="text-xs text-muted-foreground">
-                                Alert per filament product (e.g. all HF Black PETG spools, all Matte White PLA spools).
+                                Riasztás termékenként (pl. az összes HF Black PETG, az összes Matte White PLA tekercs).
                               </p>
                             </div>
                           </div>
@@ -1786,10 +1807,10 @@ function SettingsContent() {
                             />
                             <div>
                               <Label htmlFor="group-material-vendor-name" className="cursor-pointer text-sm">
-                                Material + Name + Vendor
+                                Anyag + név + gyártó
                               </Label>
                               <p className="text-xs text-muted-foreground">
-                                Like Material + Name, but distinguishes between vendors (e.g. Bambu Lab HF Black PETG vs Polymaker PolyLite Black PETG).
+                                Mint az anyag + név, de a gyártókat is megkülönbözteti (pl. Bambu Lab HF Black PETG és Polymaker PolyLite Black PETG).
                               </p>
                             </div>
                           </div>
@@ -1798,7 +1819,7 @@ function SettingsContent() {
 
                       {/* Monitored groups */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Monitor</Label>
+                        <Label className="text-sm font-medium">Figyelt csoportok</Label>
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
                             <input
@@ -1810,7 +1831,7 @@ function SettingsContent() {
                               className="h-4 w-4"
                             />
                             <Label htmlFor="monitor-all" className="cursor-pointer text-sm">
-                              All groups
+                              Minden csoport
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1823,7 +1844,7 @@ function SettingsContent() {
                               className="h-4 w-4"
                             />
                             <Label htmlFor="monitor-selected" className="cursor-pointer text-sm">
-                              Selected groups only
+                              Csak a kiválasztottak
                             </Label>
                           </div>
                         </div>
@@ -1831,7 +1852,7 @@ function SettingsContent() {
                         {alertConfig.monitoredGroups !== undefined && (
                           <div className="ml-6 space-y-2 pt-1">
                             {availableGroups.length === 0 ? (
-                              <p className="text-xs text-muted-foreground italic">No spool groups found.</p>
+                              <p className="text-xs text-muted-foreground italic">Nincs tekercscsoport.</p>
                             ) : (
                               availableGroups.map((group) => (
                                 <div key={group.groupKey} className="flex items-center space-x-2">
@@ -1862,7 +1883,7 @@ function SettingsContent() {
                                       {group.groupLabel}
                                     </Label>
                                     <span className="text-xs text-muted-foreground">
-                                      ({group.spoolCount} spool{group.spoolCount !== 1 ? 's' : ''})
+                                      ({group.spoolCount} tekercs)
                                     </span>
                                   </div>
                                 </div>
@@ -1876,7 +1897,7 @@ function SettingsContent() {
                         onClick={saveAlertSettings}
                         disabled={savingAlerts}
                       >
-                        {savingAlerts ? 'Saving...' : 'Save Alert Settings'}
+                        {savingAlerts ? 'Mentés...' : 'Riasztási beállítások mentése'}
                       </Button>
                     </div>
                   )}
@@ -1888,7 +1909,7 @@ function SettingsContent() {
                       variant="outline"
                       size="sm"
                     >
-                      {savingAlerts ? 'Saving...' : 'Save'}
+                      {savingAlerts ? 'Mentés...' : 'Mentés'}
                     </Button>
                   )}
                 </CardContent>
@@ -1901,19 +1922,19 @@ function SettingsContent() {
             <CardHeader>
               <CardTitle>QR Code / NFC URL</CardTitle>
               <CardDescription>
-                Override the base URL used in generated QR code labels and NFC tags.
-                Leave empty to use the current browser URL automatically.
+                A QR-címkékben és NFC tagekben használt alap cím felülírása.
+                Üresen hagyva a böngésző aktuális címét használja.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="qrBaseUrl">Base URL</Label>
+                <Label htmlFor="qrBaseUrl">Alap cím</Label>
                 <div className="flex gap-2">
                   <Input
                     id="qrBaseUrl"
                     value={qrBaseUrl}
                     onChange={(e) => setQrBaseUrl(e.target.value)}
-                    placeholder="e.g., http://192.168.1.100:3000"
+                    placeholder="pl. http://192.168.1.100:3000"
                   />
                   <Button
                     onClick={async () => {
@@ -1925,21 +1946,21 @@ function SettingsContent() {
                           body: JSON.stringify({ type: 'qr_base_url', url: qrBaseUrl }),
                         });
                         if (!res.ok) throw new Error();
-                        toast.success(qrBaseUrl.trim() ? 'QR base URL saved' : 'QR base URL cleared');
+                        toast.success(qrBaseUrl.trim() ? 'QR alap cím mentve' : 'QR alap cím törölve');
                       } catch {
-                        toast.error('Failed to save QR base URL');
+                        toast.error('Nem sikerült menteni a QR alap címet');
                       } finally {
                         setSavingQrUrl(false);
                       }
                     }}
                     disabled={savingQrUrl}
                   >
-                    {savingQrUrl ? 'Saving...' : 'Save'}
+                    {savingQrUrl ? 'Mentés...' : 'Mentés'}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Useful when accessing SpoolmanSync through a reverse proxy or custom domain.
-                  QR codes will link to this URL instead of the browser address bar URL.
+                  Akkor hasznos, ha a SpoolmanSync-et reverse proxyn vagy saját domainen éred el.
+                  A QR-kódok erre a címre mutatnak a böngésző címsora helyett.
                 </p>
               </div>
             </CardContent>

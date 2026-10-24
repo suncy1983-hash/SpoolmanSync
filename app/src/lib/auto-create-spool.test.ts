@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { SpoolmanClient, type Filament, type Spool, type Vendor } from './api/spoolman';
+import { SpoolmanClient, normalizeTag, type Filament, type Spool, type Vendor } from './api/spoolman';
 import {
+  decideWeightSync,
   densityForMaterial,
   ensureSpoolForTray,
   findMatchingFilament,
@@ -125,6 +126,32 @@ describe('findMatchingFilament', () => {
       fil(2, 'PLA Basic', '000000', 99),
       fil(3, 'PLA Basic', '000000', 3, 'PETG'),
     ], 3, info)).toBeUndefined();
+  });
+});
+
+describe('decideWeightSync', () => {
+  const info = parseBambuTray(H2C_TRAY)!; // 12% of 1000 g → 120 g
+  const spool = (remaining: number, tag?: string) =>
+    ({ remaining_weight: remaining, extra: tag === undefined ? {} : { tag: JSON.stringify(tag) } }) as unknown as Spool;
+
+  it('updates the same spool to the AMS estimate', () => {
+    expect(decideWeightSync(spool(1000, 'a35c6cdf3852467ab08aa2aada016c93'), info, normalizeTag))
+      .toEqual({ action: 'update', remainingWeight: 120, previous: 1000 });
+  });
+
+  it('updates a hand-assigned spool without a stored serial', () => {
+    expect(decideWeightSync(spool(800), info, normalizeTag).action).toBe('update');
+  });
+
+  it('never touches a different physical spool', () => {
+    expect(decideWeightSync(spool(1000, 'FFFF0000FFFF0000FFFF0000FFFF0000'), info, normalizeTag))
+      .toEqual({ action: 'skip', reason: 'different_spool' });
+  });
+
+  it('skips when the AMS has no estimate or nothing changed', () => {
+    const noEstimate = parseBambuTray({ ...H2C_TRAY, remain: -1, remain_enabled: false })!;
+    expect(decideWeightSync(spool(500), noEstimate, normalizeTag)).toEqual({ action: 'skip', reason: 'no_ams_estimate' });
+    expect(decideWeightSync(spool(120.4), info, normalizeTag)).toEqual({ action: 'skip', reason: 'unchanged' });
   });
 });
 

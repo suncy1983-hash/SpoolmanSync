@@ -81,7 +81,7 @@ export function PrinterCard({ printer, spools, onSpoolAssign, onSpoolUnassign, s
         {printer.external_spools.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">
-              {printer.external_spools.length > 1 ? 'External Spools' : 'External Spool'}
+              {printer.external_spools.length > 1 ? 'Külső tekercsek' : 'Külső tekercs'}
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {printer.external_spools.map((extSpool) => (

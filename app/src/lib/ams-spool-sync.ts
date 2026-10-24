@@ -4,10 +4,10 @@
  */
 
 import type { Spool, SpoolmanClient } from '@/lib/api/spoolman';
-import { HomeAssistantClient } from '@/lib/api/homeassistant';
+import { HomeAssistantClient, type HAState } from '@/lib/api/homeassistant';
 import { createActivityLog } from '@/lib/activity-log';
 import { spoolEvents, SPOOL_UPDATED, SpoolUpdateEvent } from '@/lib/events';
-import { ensureSpoolForTray, parseBambuTray } from '@/lib/auto-create-spool';
+import { decideWeightSync, ensureSpoolForTray, parseBambuTray } from '@/lib/auto-create-spool';
 import { normalizeTag } from '@/lib/api/spoolman';
 
 export interface AutoCreateOutcome {
@@ -92,17 +92,8 @@ function isMirrorEntity(entityId: string): boolean {
   return /_active_tray$/.test(entityId);
 }
 
-/**
- * Walk every Bambu tray HA knows about and make sure each loaded RFID spool
- * exists in Spoolman and is assigned to its tray. Trays that already have a
- * spool assigned are left alone.
- */
-export async function syncAllAmsTrays(
-  client: SpoolmanClient,
-  resolveToUniqueId: (entityId: string) => Promise<string>,
-): Promise<SyncSummary> {
-  const summary: SyncSummary = { scanned: 0, created: 0, assigned: 0, alreadyAssigned: 0, skipped: 0, errors: [] };
-
+/** Current HA state of every Bambu AMS / external tray (not the mirror sensors). */
+async function listBambuTrays(): Promise<HAState[]> {
   const haClient = await HomeAssistantClient.fromConnection();
   if (!haClient) throw new Error('Home Assistant is not connected');
 
@@ -114,12 +105,103 @@ export async function syncAllAmsTrays(
   );
 
   const states = await haClient.getStates();
-  const trays = states.filter(s =>
+  return states.filter(s =>
     bambuEntityIds.has(s.entity_id)
     && !isMirrorEntity(s.entity_id)
     && s.attributes && 'tray_uuid' in s.attributes,
   );
+}
 
+export interface WeightSyncSummary {
+  scanned: number;
+  updated: { spoolId: number; trayId: string; from: number; to: number }[];
+  unchanged: number;
+  skipped: number;
+  errors: { trayId: string; error: string }[];
+}
+
+/**
+ * Overwrite the remaining weight of spools sitting in the AMS with the AMS
+ * estimate (tray_weight × remain %). Only the same physical spool is touched
+ * (see decideWeightSync). Pass trayEntityId to update a single tray.
+ */
+export async function syncWeightsFromAms(
+  client: SpoolmanClient,
+  resolveToUniqueId: (entityId: string) => Promise<string>,
+  trayEntityId?: string,
+): Promise<WeightSyncSummary> {
+  const summary: WeightSyncSummary = { scanned: 0, updated: [], unchanged: 0, skipped: 0, errors: [] };
+
+  let trays = await listBambuTrays();
+  if (trayEntityId) {
+    trays = trays.filter(t => t.entity_id === trayEntityId);
+    if (trays.length === 0) throw new Error(`Tray ${trayEntityId} not found`);
+  }
+
+  const spools = await client.getSpools();
+
+  for (const tray of trays) {
+    summary.scanned++;
+    try {
+      const info = parseBambuTray(tray.attributes as Record<string, unknown>);
+      if (!info) { summary.skipped++; continue; }
+
+      const uniqueId = await resolveToUniqueId(tray.entity_id);
+      const spool = spools.find(s =>
+        s.extra?.['active_tray'] === JSON.stringify(uniqueId)
+        || s.extra?.['active_tray'] === JSON.stringify(tray.entity_id),
+      ) ?? spools.find(s => normalizeTag(s.extra?.['tag']) === normalizeTag(info.trayUuid));
+      if (!spool) { summary.skipped++; continue; }
+
+      const decision = decideWeightSync(spool, info, normalizeTag);
+      if (decision.action === 'skip') {
+        if (decision.reason === 'unchanged') summary.unchanged++;
+        else summary.skipped++;
+        continue;
+      }
+
+      await client.updateSpool(spool.id, { remaining_weight: decision.remainingWeight });
+      summary.updated.push({ spoolId: spool.id, trayId: tray.entity_id, from: decision.previous, to: decision.remainingWeight });
+
+      const weightEvent: SpoolUpdateEvent = {
+        type: 'weight_sync',
+        spoolId: spool.id,
+        spoolName: spool.filament?.name ?? info.filamentName,
+        newWeight: decision.remainingWeight,
+        trayId: tray.entity_id,
+        timestamp: Date.now(),
+      };
+      spoolEvents.emit(SPOOL_UPDATED, weightEvent);
+    } catch (err) {
+      summary.errors.push({ trayId: tray.entity_id, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  await createActivityLog({
+    type: 'ams_weight_sync',
+    message: trayEntityId
+      ? (summary.updated.length
+        ? `Weight synced from AMS for ${trayEntityId}: spool #${summary.updated[0].spoolId} ${Math.round(summary.updated[0].from)}g → ${summary.updated[0].to}g`
+        : `Weight sync from AMS for ${trayEntityId}: nothing to update`)
+      : `Weight sync from AMS: ${summary.updated.length} updated, ${summary.unchanged} unchanged, ${summary.skipped} skipped, ${summary.errors.length} errors`,
+    details: { ...summary },
+  });
+
+  return summary;
+}
+
+/**
+ * Walk every Bambu tray HA knows about and make sure each loaded RFID spool
+ * exists in Spoolman and is assigned to its tray. Trays that already have a
+ * spool assigned are left alone.
+ */
+export async function syncAllAmsTrays(
+  client: SpoolmanClient,
+  resolveToUniqueId: (entityId: string) => Promise<string>,
+): Promise<SyncSummary> {
+  const summary: SyncSummary = { scanned: 0, created: 0, assigned: 0, alreadyAssigned: 0, skipped: 0, errors: [] };
+
+  const trays = await listBambuTrays();
   const spools = await client.getSpools();
 
   for (const tray of trays) {

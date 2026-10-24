@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { SpoolFilterBar } from '@/components/dashboard/spool-filter-bar';
 import { SpoolColorSwatch } from '@/components/spool-color-swatch';
 import type { HATray } from '@/lib/api/homeassistant';
@@ -60,6 +61,8 @@ interface TraySlotProps {
   spools: Spool[];
   onAssign: (spoolId: number) => void;
   onUnassign?: (spoolId: number) => void;
+  /** Called after the spool's weight was overwritten with the AMS estimate. */
+  onWeightSynced?: () => void;
   mismatch?: MismatchInfo;
   showLocation?: boolean;
 }
@@ -102,8 +105,9 @@ function sortSpools(spools: Spool[], sortBy: SortBy): Spool[] {
   });
 }
 
-export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mismatch, showLocation }: TraySlotProps) {
+export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, onWeightSynced, mismatch, showLocation }: TraySlotProps) {
   const [open, setOpen] = useState(false);
+  const [weightSyncing, setWeightSyncing] = useState(false);
   const [filters, setFilters] = useState<Record<string, string | null>>({});
   const [enabledFields, setEnabledFields] = useState<FilterField[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>('id');
@@ -181,8 +185,41 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
     }
   };
 
-  const externalLabel = tray.slot_name?.trim() || 'External';
-  const trayLabel = tray.is_external ? externalLabel : `Tray ${tray.tray_number}`;
+  const externalLabel = tray.slot_name?.trim() || 'Külső';
+  const trayLabel = tray.is_external ? externalLabel : `${tray.tray_number}. tálca`;
+
+  // ha-bambulab reports the AMS estimate as a percentage (-1 when unknown).
+  const amsRemainPct = typeof tray.remaining_weight === 'number' && tray.remaining_weight >= 0 && tray.remaining_weight <= 100
+    ? tray.remaining_weight
+    : null;
+  const amsSpoolSize = assignedSpool?.filament.weight || assignedSpool?.initial_weight || 1000;
+  const amsEstimateG = amsRemainPct !== null ? Math.round((amsSpoolSize * amsRemainPct) / 100) : null;
+
+  const handleWeightSync = async () => {
+    setWeightSyncing(true);
+    try {
+      const res = await fetch('/api/spools/sync-ams-weights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trayId: tray.entity_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sikertelen súlyfrissítés');
+      if (data.updated?.length) {
+        const u = data.updated[0];
+        toast.success(`#${u.spoolId} súlya frissítve: ${Math.round(u.from)} g → ${u.to} g`);
+        onWeightSynced?.();
+      } else if (data.unchanged) {
+        toast.info('A súly már egyezik az AMS becslésével');
+      } else {
+        toast.warning('Nem frissíthető: az AMS nem ad becslést, vagy másik tekercs van a tálcában');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sikertelen súlyfrissítés');
+    } finally {
+      setWeightSyncing(false);
+    }
+  };
 
   // Check if any enabled filters have values to show
   const hasFilterOptions = enabledFields.some(f => f.values.length > 0);
@@ -205,11 +242,11 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
           {mismatch && assignedSpool && (
             <div
               className="flex items-center gap-1.5 px-2 py-1 mb-2 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700"
-              title={`RFID: ${mismatch.printerReports.color} (${mismatch.printerReports.material}) | Assigned: ${mismatch.spoolmanHas.color} (${mismatch.spoolmanHas.material})`}
+              title={`RFID: ${mismatch.printerReports.color} (${mismatch.printerReports.material}) | Hozzárendelt: ${mismatch.spoolmanHas.color} (${mismatch.spoolmanHas.material})`}
             >
               <span className="text-amber-600 dark:text-amber-400 text-xs">⚠️</span>
               <span className="text-[10px] font-medium text-amber-700 dark:text-amber-300 truncate">
-                Possible wrong spool
+                Lehet, hogy rossz tekercs
               </span>
             </div>
           )}
@@ -227,16 +264,16 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
               {/* Info: material and vendor stacked */}
               <div className="space-y-1 mb-2 flex-1">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-[9px] font-medium text-muted-foreground uppercase">Material:</span>
+                  <span className="text-[9px] font-medium text-muted-foreground uppercase">Anyag:</span>
                   <span className="text-xs font-medium">{assignedSpool.filament.material}</span>
                 </div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-[9px] font-medium text-muted-foreground uppercase">Vendor:</span>
-                  <span className="text-xs font-medium truncate">{assignedSpool.filament.vendor?.name || 'Unknown'}</span>
+                  <span className="text-[9px] font-medium text-muted-foreground uppercase">Gyártó:</span>
+                  <span className="text-xs font-medium truncate">{assignedSpool.filament.vendor?.name || 'Ismeretlen'}</span>
                 </div>
                 {showLocation && assignedSpool.location && (
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[9px] font-medium text-muted-foreground uppercase">Location:</span>
+                    <span className="text-[9px] font-medium text-muted-foreground uppercase">Hely:</span>
                     <span className="text-xs font-medium truncate">{assignedSpool.location}</span>
                   </div>
                 )}
@@ -249,7 +286,7 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
                 </span>
                 {showWeight && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
-                    {Math.round(displayWeight)}g<span className="hidden min-[320px]:inline"> Remaining</span>
+                    {Math.round(displayWeight)} g<span className="hidden min-[320px]:inline"> maradt</span>
                   </Badge>
                 )}
               </div>
@@ -261,10 +298,10 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
                 className="h-8 w-8 rounded-full border-2 border-dashed border-muted-foreground/30 mb-2"
               />
               <p className="text-xs text-muted-foreground">
-                No spool assigned
+                Nincs tekercs hozzárendelve
               </p>
               <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">
-                Click to assign
+                Kattints a hozzárendeléshez
               </p>
             </div>
           )}
@@ -277,11 +314,11 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
         <span
           role="button"
           tabIndex={0}
-          aria-label="Unassign spool"
+          aria-label="Tekercs levétele"
           onClick={handleUnassign}
           onKeyDown={handleUnassignKeyDown}
           className="absolute top-3 right-3 z-10 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer text-xs"
-          title="Unassign spool"
+          title="Tekercs levétele"
         >
           ✕
         </span>
@@ -290,10 +327,10 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            Assign Spool to {tray.is_external ? (tray.slot_name?.trim() || 'External Slot') : `Tray ${tray.tray_number}`}
+            Tekercs hozzárendelése: {tray.is_external ? (tray.slot_name?.trim() || 'Külső tartó') : `${tray.tray_number}. tálca`}
           </DialogTitle>
           <DialogDescription>
-            Search and select a spool from your Spoolman inventory.
+            Keress és válassz tekercset a Spoolman készletből.
           </DialogDescription>
         </DialogHeader>
 
@@ -304,12 +341,12 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
               <span className="text-amber-500 mt-0.5">⚠️</span>
               <div className="space-y-1.5">
                 <p className="font-medium text-amber-700 dark:text-amber-300">
-                  Possible wrong spool assigned
+                  Lehet, hogy rossz tekercs van hozzárendelve
                 </p>
                 <div className="text-xs text-amber-600 dark:text-amber-400 space-y-0.5">
                   <p>
-                    <span className="opacity-70">RFID reports:</span>{' '}
-                    {mismatch.printerReports.material || 'unknown material'}
+                    <span className="opacity-70">RFID szerint:</span>{' '}
+                    {mismatch.printerReports.material || 'ismeretlen anyag'}
                     {mismatch.printerReports.color && (
                       <span className="inline-flex items-center gap-1 ml-1">
                         <span
@@ -321,7 +358,7 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
                     )}
                   </p>
                   <p>
-                    <span className="opacity-70">Assigned spool:</span>{' '}
+                    <span className="opacity-70">Hozzárendelt tekercs:</span>{' '}
                     {mismatch.spoolmanHas.material}
                     <span className="inline-flex items-center gap-1 ml-1">
                       <span
@@ -333,7 +370,7 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Select the correct spool below.
+                  Válaszd ki lent a helyes tekercset.
                 </p>
               </div>
             </div>
@@ -354,10 +391,10 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="id">Sort: ID</SelectItem>
-                    <SelectItem value="name">Sort: Name</SelectItem>
-                    <SelectItem value="material">Sort: Material</SelectItem>
-                    <SelectItem value="vendor">Sort: Vendor</SelectItem>
+                    <SelectItem value="id">Rendezés: ID</SelectItem>
+                    <SelectItem value="name">Rendezés: név</SelectItem>
+                    <SelectItem value="material">Rendezés: anyag</SelectItem>
+                    <SelectItem value="vendor">Rendezés: gyártó</SelectItem>
                   </SelectContent>
                 </Select>
               }
@@ -369,18 +406,18 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="id">Sort: ID</SelectItem>
-                  <SelectItem value="name">Sort: Name</SelectItem>
-                  <SelectItem value="material">Sort: Material</SelectItem>
-                  <SelectItem value="vendor">Sort: Vendor</SelectItem>
+                  <SelectItem value="id">Rendezés: ID</SelectItem>
+                  <SelectItem value="name">Rendezés: név</SelectItem>
+                  <SelectItem value="material">Rendezés: anyag</SelectItem>
+                  <SelectItem value="vendor">Rendezés: gyártó</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
-          <CommandInput placeholder="Search spools by name, vendor, material, ID, or any field..." />
+          <CommandInput placeholder="Keresés név, gyártó, anyag, ID vagy bármely mező szerint..." />
           <CommandList className="max-h-[300px]">
-            <CommandEmpty>No spools found matching your filters.</CommandEmpty>
-            <CommandGroup heading={`Available Spools (${filteredSpools.length})`}>
+            <CommandEmpty>Nincs a szűrésnek megfelelő tekercs.</CommandEmpty>
+            <CommandGroup heading={`Elérhető tekercsek (${filteredSpools.length})`}>
               {filteredSpools.map((spool) => (
                 <CommandItem
                   key={spool.id}
@@ -397,23 +434,42 @@ export function TraySlot({ tray, assignedSpool, spools, onAssign, onUnassign, mi
                       {spool.filament.name || spool.filament.material}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {spool.filament.vendor?.name ? `${spool.filament.vendor.name} • ` : ''}{spool.filament.material} • {Math.round(spool.remaining_weight)}g
+                      {spool.filament.vendor?.name ? `${spool.filament.vendor.name} • ` : ''}{spool.filament.material} • {Math.round(spool.remaining_weight)} g
                     </p>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     #{spool.id}
                   </span>
                   {assignedSpool?.id === spool.id && (
-                    <Badge variant="outline" className="ml-1">Current</Badge>
+                    <Badge variant="outline" className="ml-1">Jelenlegi</Badge>
                   )}
                 </CommandItem>
               ))}
             </CommandGroup>
           </CommandList>
         </Command>
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-2">
+          {assignedSpool && !tray.is_external ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={weightSyncing || amsEstimateG === null}
+                onClick={handleWeightSync}
+                title="A hozzárendelt tekercs maradék súlyát felülírja az AMS becslésével"
+              >
+                {weightSyncing ? 'Frissítés…' : 'Súly az AMS-ből'}
+              </Button>
+              <span>
+                {amsEstimateG !== null
+                  ? `AMS: ${amsRemainPct}% ≈ ${amsEstimateG} g (most: ${Math.round(assignedSpool.remaining_weight)} g)`
+                  : 'Az AMS nem ad becslést'}
+              </span>
+            </div>
+          ) : <span />}
           <Button variant="ghost" onClick={() => setOpen(false)}>
-            Cancel
+            Mégse
           </Button>
         </div>
       </DialogContent>

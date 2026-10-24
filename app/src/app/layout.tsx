@@ -32,7 +32,7 @@ export default async function RootLayout({
   const ingressPath = headersList.get('x-ingress-path');
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="hu" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}
       >

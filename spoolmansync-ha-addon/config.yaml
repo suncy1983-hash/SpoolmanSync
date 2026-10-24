@@ -1,5 +1,5 @@
 name: SpoolmanSync (auto-create)
-version: "1.6.14.1"
+version: "1.6.14.2"
 slug: spoolmansync-ha-addon
 description: SpoolmanSync fork that also adds Bambu RFID spools from the AMS to Spoolman automatically
 url: https://github.com/suncy1983-hash/SpoolmanSync

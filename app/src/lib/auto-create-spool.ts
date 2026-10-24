@@ -177,6 +177,35 @@ export function findMatchingFilament(
     ?? candidates.find(f => f.name.toLowerCase().includes(name) && sameColor(f));
 }
 
+/** Differences smaller than this are AMS rounding noise and are not written. */
+export const WEIGHT_SYNC_MIN_DIFF_G = 1;
+
+export type WeightSyncDecision =
+  | { action: 'update'; remainingWeight: number; previous: number }
+  | { action: 'skip'; reason: 'no_ams_estimate' | 'different_spool' | 'unchanged' };
+
+/**
+ * Decide whether a spool's remaining weight should be overwritten with the
+ * AMS estimate of the tray it sits in. Only the same physical spool is updated:
+ * a stored serial that differs from the tray's means another spool is loaded.
+ */
+export function decideWeightSync(
+  spool: Pick<Spool, 'remaining_weight' | 'extra'>,
+  info: BambuTrayInfo,
+  normalize: (v: string | undefined | null) => string,
+): WeightSyncDecision {
+  if (!info.remainFromAms) return { action: 'skip', reason: 'no_ams_estimate' };
+  const storedTag = normalize(spool.extra?.['tag']);
+  if (storedTag && storedTag !== normalize(info.trayUuid)) {
+    return { action: 'skip', reason: 'different_spool' };
+  }
+  const previous = Number(spool.remaining_weight) || 0;
+  if (Math.abs(previous - info.remainingWeight) < WEIGHT_SYNC_MIN_DIFF_G) {
+    return { action: 'skip', reason: 'unchanged' };
+  }
+  return { action: 'update', remainingWeight: info.remainingWeight, previous };
+}
+
 export interface EnsureSpoolResult {
   spool: Spool;
   created: boolean;

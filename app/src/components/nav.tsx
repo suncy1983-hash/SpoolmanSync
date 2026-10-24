@@ -8,12 +8,12 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 
 const navItems = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/scan', label: 'Scan' },
-  { href: '/reports', label: 'Reports' },
-  { href: '/automations', label: 'Automations' },
-  { href: '/settings', label: 'Settings' },
-  { href: '/logs', label: 'Logs' },
+  { href: '/', label: 'Áttekintés' },
+  { href: '/scan', label: 'Szkennelés' },
+  { href: '/reports', label: 'Riportok' },
+  { href: '/automations', label: 'Automatizmusok' },
+  { href: '/settings', label: 'Beállítások' },
+  { href: '/logs', label: 'Napló' },
 ];
 
 export function Nav() {

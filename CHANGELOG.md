@@ -5,6 +5,15 @@ All notable changes to SpoolmanSync will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.14.2] - 2026-10-24 (suncy1983-hash fork)
+
+### Added
+- Manual weight sync from the AMS: "Súlyok az AMS-ből" on the dashboard and in Settings overwrites the remaining weight of every RFID spool in the AMS with the AMS estimate; each tray's dialog has the same action for that one spool, showing the AMS estimate next to the stored weight. Only the same physical spool (matching RFID serial) is updated.
+- "Új tekercsek az AMS-ből" button on the dashboard.
+
+### Changed
+- Hungarian UI for the main screens: dashboard, tray cards and dialog, navigation, settings.
+
 ## [1.6.14.1] - 2026-10-24 (suncy1983-hash fork)
 
 ### Added
